@@ -10,33 +10,63 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as PrivacidadRouteImport } from './routes/privacidad'
+import { Route as SoporteRouteImport } from './routes/soporte'
+import { Route as TerminosRouteImport } from './routes/terminos'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PrivacidadRoute = PrivacidadRouteImport.update({
+  id: '/privacidad',
+  path: '/privacidad',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SoporteRoute = SoporteRouteImport.update({
+  id: '/soporte',
+  path: '/soporte',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TerminosRoute = TerminosRouteImport.update({
+  id: '/terminos',
+  path: '/terminos',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/privacidad': typeof PrivacidadRoute
+  '/soporte': typeof SoporteRoute
+  '/terminos': typeof TerminosRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/privacidad': typeof PrivacidadRoute
+  '/soporte': typeof SoporteRoute
+  '/terminos': typeof TerminosRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/privacidad': typeof PrivacidadRoute
+  '/soporte': typeof SoporteRoute
+  '/terminos': typeof TerminosRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths: '/' | '/privacidad' | '/soporte' | '/terminos'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to: '/' | '/privacidad' | '/soporte' | '/terminos'
+  id: '__root__' | '/' | '/privacidad' | '/soporte' | '/terminos'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  PrivacidadRoute: typeof PrivacidadRoute
+  SoporteRoute: typeof SoporteRoute
+  TerminosRoute: typeof TerminosRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -48,11 +78,35 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/privacidad': {
+      id: '/privacidad'
+      path: '/privacidad'
+      fullPath: '/privacidad'
+      preLoaderRoute: typeof PrivacidadRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/soporte': {
+      id: '/soporte'
+      path: '/soporte'
+      fullPath: '/soporte'
+      preLoaderRoute: typeof SoporteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/terminos': {
+      id: '/terminos'
+      path: '/terminos'
+      fullPath: '/terminos'
+      preLoaderRoute: typeof TerminosRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  PrivacidadRoute: PrivacidadRoute,
+  SoporteRoute: SoporteRoute,
+  TerminosRoute: TerminosRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
