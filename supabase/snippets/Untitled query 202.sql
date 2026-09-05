@@ -1,0 +1,1 @@
+insert into public.user_roles (user_id, role) select id, 'admin' from auth.users where email = 'zaratrustre@gmail.com';

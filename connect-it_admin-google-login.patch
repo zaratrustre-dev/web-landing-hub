@@ -1,0 +1,488 @@
+diff --git a/.env.example b/.env.example
+index e829834..b629831 100644
+--- a/.env.example
++++ b/.env.example
+@@ -3,3 +3,9 @@
+ # Producción: Project Settings > API en supabase.com, del proyecto enlazado.
+ VITE_SUPABASE_URL=
+ VITE_SUPABASE_ANON_KEY=
++
++# --- Lo de abajo va en un archivo aparte llamado ".env" (SIN .local), en la raíz ---
++# Lo lee `supabase/config.toml` vía env(...) para activar el login con Google.
++# Sacar el Client ID / Secret de Google Cloud Console (OAuth 2.0 Client ID, tipo "Web application").
++SUPABASE_AUTH_EXTERNAL_GOOGLE_CLIENT_ID=
++SUPABASE_AUTH_EXTERNAL_GOOGLE_SECRET=
+diff --git a/.gitignore b/.gitignore
+index d24df8a..6fb2866 100644
+--- a/.gitignore
++++ b/.gitignore
+@@ -16,6 +16,10 @@ dist-ssr
+ .nitro
+ *.local
+ 
++# Supabase CLI secrets (env() en supabase/config.toml) — nunca commitear
++.env
++!.env.example
++
+ # Wrangler / Cloudflare
+ .wrangler/
+ .dev.vars
+diff --git a/src/lib/auth.ts b/src/lib/auth.ts
+new file mode 100644
+index 0000000..3aeaa7d
+--- /dev/null
++++ b/src/lib/auth.ts
+@@ -0,0 +1,83 @@
++import type { Session } from "@supabase/supabase-js";
++import { useEffect, useState } from "react";
++
++import { supabase } from "./supabase";
++
++/**
++ * Sesión actual de Supabase Auth, reactiva a login/logout.
++ * `loading` es true hasta que sabemos con certeza si hay sesión o no
++ * (evita parpadeos de "no autenticado" mientras se resuelve).
++ */
++export function useSession() {
++  const [session, setSession] = useState<Session | null>(null);
++  const [loading, setLoading] = useState(true);
++
++  useEffect(() => {
++    supabase.auth.getSession().then(({ data }) => {
++      setSession(data.session);
++      setLoading(false);
++    });
++
++    const {
++      data: { subscription },
++    } = supabase.auth.onAuthStateChange((_event, nextSession) => {
++      setSession(nextSession);
++    });
++
++    return () => subscription.unsubscribe();
++  }, []);
++
++  return { session, loading };
++}
++
++/**
++ * Comprueba el rol admin (tabla user_roles) para el usuario dado.
++ * Devuelve null mientras no se sabe todavía, true/false cuando se resuelve.
++ */
++export function useIsAdmin(userId: string | undefined) {
++  const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
++
++  useEffect(() => {
++    if (!userId) {
++      setIsAdmin(false);
++      return;
++    }
++
++    let cancelled = false;
++    setIsAdmin(null);
++
++    // NOTA: cast puntual porque los tipos de Functions en database.types.ts están
++    // escritos a mano (sin Docker no se pueden generar con `supabase gen types`).
++    // El inferidor de .rpc() de supabase-js es estricto con esos metadatos.
++    // Al regenerar los tipos de verdad, esto debería poder quitarse.
++    (
++      supabase.rpc as (
++        fn: string,
++        args: Record<string, unknown>,
++      ) => PromiseLike<{ data: unknown; error: unknown }>
++    )("is_admin", { uid: userId }).then(({ data, error }: { data: unknown; error: unknown }) => {
++      if (cancelled) return;
++      setIsAdmin(error ? false : Boolean(data));
++    });
++
++    return () => {
++      cancelled = true;
++    };
++  }, [userId]);
++
++  return isAdmin;
++}
++
++/** Inicia el flujo de OAuth con Google. Redirige el navegador entero. */
++export async function signInWithGoogle(redirectPath = "/admin") {
++  const redirectTo = `${window.location.origin}${redirectPath}`;
++  const { error } = await supabase.auth.signInWithOAuth({
++    provider: "google",
++    options: { redirectTo },
++  });
++  if (error) throw error;
++}
++
++export async function signOut() {
++  await supabase.auth.signOut();
++}
+diff --git a/src/lib/database.types.ts b/src/lib/database.types.ts
+index 99a6f93..d94b990 100644
+--- a/src/lib/database.types.ts
++++ b/src/lib/database.types.ts
+@@ -193,5 +193,13 @@ export interface Database {
+       is_admin: { Args: { uid?: string }; Returns: boolean };
+       likes_used_last_24h: { Args: { uid?: string }; Returns: number };
+     };
++    Views: Record<string, never>;
++    Enums: {
++      professional_role: ProfessionalRole;
++      match_status: MatchStatus;
++      report_target_type: ReportTargetType;
++      app_role: AppRole;
++    };
++    CompositeTypes: Record<string, never>;
+   };
+ }
+diff --git a/src/routeTree.gen.ts b/src/routeTree.gen.ts
+index 0590ea0..ddd5d35 100644
+--- a/src/routeTree.gen.ts
++++ b/src/routeTree.gen.ts
+@@ -10,15 +10,23 @@
+ 
+ import { Route as rootRouteImport } from './routes/__root'
+ import { Route as IndexRouteImport } from './routes/index'
++import { Route as AdminRouteImport } from './routes/admin'
+ import { Route as PrivacidadRouteImport } from './routes/privacidad'
+ import { Route as SoporteRouteImport } from './routes/soporte'
+ import { Route as TerminosRouteImport } from './routes/terminos'
++import { Route as AdminIndexRouteImport } from './routes/admin.index'
++import { Route as AdminLoginRouteImport } from './routes/admin.login'
+ 
+ const IndexRoute = IndexRouteImport.update({
+   id: '/',
+   path: '/',
+   getParentRoute: () => rootRouteImport,
+ } as any)
++const AdminRoute = AdminRouteImport.update({
++  id: '/admin',
++  path: '/admin',
++  getParentRoute: () => rootRouteImport,
++} as any)
+ const PrivacidadRoute = PrivacidadRouteImport.update({
+   id: '/privacidad',
+   path: '/privacidad',
+@@ -34,36 +42,70 @@ const TerminosRoute = TerminosRouteImport.update({
+   path: '/terminos',
+   getParentRoute: () => rootRouteImport,
+ } as any)
++const AdminIndexRoute = AdminIndexRouteImport.update({
++  id: '/',
++  path: '/',
++  getParentRoute: () => AdminRoute,
++} as any)
++const AdminLoginRoute = AdminLoginRouteImport.update({
++  id: '/login',
++  path: '/login',
++  getParentRoute: () => AdminRoute,
++} as any)
+ 
+ export interface FileRoutesByFullPath {
+   '/': typeof IndexRoute
++  '/admin': typeof AdminRouteWithChildren
+   '/privacidad': typeof PrivacidadRoute
+   '/soporte': typeof SoporteRoute
+   '/terminos': typeof TerminosRoute
++  '/admin/login': typeof AdminLoginRoute
++  '/admin/': typeof AdminIndexRoute
+ }
+ export interface FileRoutesByTo {
+   '/': typeof IndexRoute
+   '/privacidad': typeof PrivacidadRoute
+   '/soporte': typeof SoporteRoute
+   '/terminos': typeof TerminosRoute
++  '/admin/login': typeof AdminLoginRoute
++  '/admin': typeof AdminIndexRoute
+ }
+ export interface FileRoutesById {
+   __root__: typeof rootRouteImport
+   '/': typeof IndexRoute
++  '/admin': typeof AdminRouteWithChildren
+   '/privacidad': typeof PrivacidadRoute
+   '/soporte': typeof SoporteRoute
+   '/terminos': typeof TerminosRoute
++  '/admin/login': typeof AdminLoginRoute
++  '/admin/': typeof AdminIndexRoute
+ }
+ export interface FileRouteTypes {
+   fileRoutesByFullPath: FileRoutesByFullPath
+-  fullPaths: '/' | '/privacidad' | '/soporte' | '/terminos'
++  fullPaths:
++    | '/'
++    | '/admin'
++    | '/privacidad'
++    | '/soporte'
++    | '/terminos'
++    | '/admin/login'
++    | '/admin/'
+   fileRoutesByTo: FileRoutesByTo
+-  to: '/' | '/privacidad' | '/soporte' | '/terminos'
+-  id: '__root__' | '/' | '/privacidad' | '/soporte' | '/terminos'
++  to: '/' | '/privacidad' | '/soporte' | '/terminos' | '/admin/login' | '/admin'
++  id:
++    | '__root__'
++    | '/'
++    | '/admin'
++    | '/privacidad'
++    | '/soporte'
++    | '/terminos'
++    | '/admin/login'
++    | '/admin/'
+   fileRoutesById: FileRoutesById
+ }
+ export interface RootRouteChildren {
+   IndexRoute: typeof IndexRoute
++  AdminRoute: typeof AdminRouteWithChildren
+   PrivacidadRoute: typeof PrivacidadRoute
+   SoporteRoute: typeof SoporteRoute
+   TerminosRoute: typeof TerminosRoute
+@@ -78,6 +120,13 @@ declare module '@tanstack/react-router' {
+       preLoaderRoute: typeof IndexRouteImport
+       parentRoute: typeof rootRouteImport
+     }
++    '/admin': {
++      id: '/admin'
++      path: '/admin'
++      fullPath: '/admin'
++      preLoaderRoute: typeof AdminRouteImport
++      parentRoute: typeof rootRouteImport
++    }
+     '/privacidad': {
+       id: '/privacidad'
+       path: '/privacidad'
+@@ -99,11 +148,38 @@ declare module '@tanstack/react-router' {
+       preLoaderRoute: typeof TerminosRouteImport
+       parentRoute: typeof rootRouteImport
+     }
++    '/admin/': {
++      id: '/admin/'
++      path: '/'
++      fullPath: '/admin/'
++      preLoaderRoute: typeof AdminIndexRouteImport
++      parentRoute: typeof AdminRoute
++    }
++    '/admin/login': {
++      id: '/admin/login'
++      path: '/login'
++      fullPath: '/admin/login'
++      preLoaderRoute: typeof AdminLoginRouteImport
++      parentRoute: typeof AdminRoute
++    }
+   }
+ }
+ 
++interface AdminRouteChildren {
++  AdminLoginRoute: typeof AdminLoginRoute
++  AdminIndexRoute: typeof AdminIndexRoute
++}
++
++const AdminRouteChildren: AdminRouteChildren = {
++  AdminLoginRoute: AdminLoginRoute,
++  AdminIndexRoute: AdminIndexRoute,
++}
++
++const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)
++
+ const rootRouteChildren: RootRouteChildren = {
+   IndexRoute: IndexRoute,
++  AdminRoute: AdminRouteWithChildren,
+   PrivacidadRoute: PrivacidadRoute,
+   SoporteRoute: SoporteRoute,
+   TerminosRoute: TerminosRoute,
+diff --git a/src/routes/admin.index.tsx b/src/routes/admin.index.tsx
+new file mode 100644
+index 0000000..bf016c2
+--- /dev/null
++++ b/src/routes/admin.index.tsx
+@@ -0,0 +1,79 @@
++import { createFileRoute, useNavigate } from "@tanstack/react-router";
++import { useEffect } from "react";
++
++import { signOut, useIsAdmin, useSession } from "@/lib/auth";
++
++export const Route = createFileRoute("/admin/")({
++  head: () => ({
++    meta: [{ title: "Panel admin — Connect-it" }],
++  }),
++  component: AdminDashboardPage,
++});
++
++function AdminDashboardPage() {
++  const { session, loading: loadingSession } = useSession();
++  const isAdmin = useIsAdmin(session?.user.id);
++  const navigate = useNavigate();
++
++  // Sin sesión -> a login. Se evalúa solo cuando loadingSession ya resolvió,
++  // para no redirigir de golpe mientras aún se está comprobando.
++  useEffect(() => {
++    if (!loadingSession && !session) {
++      navigate({ to: "/admin/login" });
++    }
++  }, [loadingSession, session, navigate]);
++
++  if (loadingSession || (session && isAdmin === null)) {
++    return (
++      <div className="flex min-h-screen items-center justify-center bg-background">
++        <p className="text-sm text-muted-foreground">Comprobando acceso…</p>
++      </div>
++    );
++  }
++
++  if (!session) {
++    // Redirección en curso (ver useEffect arriba).
++    return null;
++  }
++
++  if (isAdmin === false) {
++    return (
++      <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-background px-4 text-center">
++        <h1 className="text-xl font-semibold text-foreground">No tienes acceso de admin</h1>
++        <p className="max-w-sm text-sm text-muted-foreground">
++          Tu cuenta ({session.user.email}) ha iniciado sesión correctamente, pero no tiene el rol de
++          administrador. Pide que te lo asignen en la tabla <code>user_roles</code>.
++        </p>
++        <button
++          type="button"
++          onClick={() => signOut()}
++          className="rounded-md border border-input px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-accent"
++        >
++          Cerrar sesión
++        </button>
++      </div>
++    );
++  }
++
++  return (
++    <div className="min-h-screen bg-background px-6 py-10">
++      <div className="mx-auto max-w-3xl">
++        <div className="flex items-center justify-between">
++          <h1 className="text-2xl font-semibold text-foreground">Panel de administración</h1>
++          <button
++            type="button"
++            onClick={() => signOut()}
++            className="rounded-md border border-input px-3 py-1.5 text-sm font-medium text-foreground transition-colors hover:bg-accent"
++          >
++            Cerrar sesión
++          </button>
++        </div>
++        <p className="mt-2 text-sm text-muted-foreground">Sesión: {session.user.email}</p>
++        <div className="mt-8 rounded-2xl border border-dashed border-border p-8 text-center text-sm text-muted-foreground">
++          Aquí irá la gestión de usuarios, moderación y el resto de Fase 2. Login con Google y
++          verificación de rol admin ya funcionan.
++        </div>
++      </div>
++    </div>
++  );
++}
+diff --git a/src/routes/admin.login.tsx b/src/routes/admin.login.tsx
+new file mode 100644
+index 0000000..65f4a9b
+--- /dev/null
++++ b/src/routes/admin.login.tsx
+@@ -0,0 +1,59 @@
++import { createFileRoute, useNavigate } from "@tanstack/react-router";
++import { useEffect, useState } from "react";
++
++import { signInWithGoogle, useSession } from "@/lib/auth";
++
++export const Route = createFileRoute("/admin/login")({
++  head: () => ({
++    meta: [{ title: "Acceso admin — Connect-it" }],
++  }),
++  component: AdminLoginPage,
++});
++
++function AdminLoginPage() {
++  const { session, loading } = useSession();
++  const navigate = useNavigate();
++  const [error, setError] = useState<string | null>(null);
++  const [submitting, setSubmitting] = useState(false);
++
++  // Si ya hay sesión (p.ej. volviste a /admin/login por error), directo al panel.
++  useEffect(() => {
++    if (!loading && session) {
++      navigate({ to: "/admin" });
++    }
++  }, [loading, session, navigate]);
++
++  async function handleLogin() {
++    setSubmitting(true);
++    setError(null);
++    try {
++      await signInWithGoogle("/admin");
++      // A partir de aquí el navegador redirige a Google; no hay más que hacer.
++    } catch (err) {
++      setError(err instanceof Error ? err.message : "No se pudo iniciar sesión con Google.");
++      setSubmitting(false);
++    }
++  }
++
++  return (
++    <div className="flex min-h-screen items-center justify-center bg-background px-4">
++      <div className="w-full max-w-sm rounded-2xl border border-border bg-card p-8 text-center shadow-sm">
++        <h1 className="text-xl font-semibold text-foreground">Panel de administración</h1>
++        <p className="mt-2 text-sm text-muted-foreground">
++          Acceso restringido al equipo de Connect-it.
++        </p>
++
++        <button
++          type="button"
++          onClick={handleLogin}
++          disabled={submitting}
++          className="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-md bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60"
++        >
++          {submitting ? "Redirigiendo a Google…" : "Continuar con Google"}
++        </button>
++
++        {error && <p className="mt-4 text-sm text-destructive">{error}</p>}
++      </div>
++    </div>
++  );
++}
+diff --git a/src/routes/admin.tsx b/src/routes/admin.tsx
+new file mode 100644
+index 0000000..b4d1c5c
+--- /dev/null
++++ b/src/routes/admin.tsx
+@@ -0,0 +1,5 @@
++import { createFileRoute, Outlet } from "@tanstack/react-router";
++
++export const Route = createFileRoute("/admin")({
++  component: () => <Outlet />,
++});
+diff --git a/supabase/config.toml b/supabase/config.toml
+index 2db1256..01de475 100644
+--- a/supabase/config.toml
++++ b/supabase/config.toml
+@@ -155,11 +155,11 @@ max_indexes = 5
+ enabled = true
+ # The base URL of your website. Used as an allow-list for redirects and for constructing URLs used
+ # in emails.
+-site_url = "http://127.0.0.1:3000"
++site_url = "http://localhost:8080"
+ # The public URL that Auth serves on. Defaults to the API external URL with `/auth/v1` appended.
+ # external_url = ""
+ # A list of *exact* URLs that auth providers are permitted to redirect to post authentication.
+-additional_redirect_urls = ["https://127.0.0.1:3000"]
++additional_redirect_urls = ["http://localhost:8080", "http://localhost:8080/admin", "http://127.0.0.1:8080", "http://127.0.0.1:8080/admin"]
+ # How long tokens are valid for, in seconds. Defaults to 3600 (1 hour), maximum 604,800 (1 week).
+ jwt_expiry = 3600
+ # JWT issuer URL. If not set, defaults to auth.external_url.
+@@ -318,6 +318,17 @@ max_frequency = "5s"
+ # Use an external OAuth provider. The full list of providers are: `apple`, `azure`, `bitbucket`,
+ # `discord`, `facebook`, `github`, `gitlab`, `google`, `keycloak`, `linkedin_oidc`, `notion`, `twitch`,
+ # `twitter`, `x`, `slack`, `spotify`, `workos`, `zoom`.
++# PDR §7: solo Google OAuth por ahora. Apple se activará más adelante (bloque de abajo).
++[auth.external.google]
++enabled = true
++client_id = "env(SUPABASE_AUTH_EXTERNAL_GOOGLE_CLIENT_ID)"
++# DO NOT commit your OAuth provider secret to git. Use environment variable substitution instead:
++secret = "env(SUPABASE_AUTH_EXTERNAL_GOOGLE_SECRET)"
++# Overrides the default auth callback URL derived from auth.external_url.
++redirect_uri = ""
++# If enabled, the nonce check will be skipped. Required for local sign in with Google auth.
++skip_nonce_check = true
++
+ [auth.external.apple]
+ enabled = false
+ client_id = ""

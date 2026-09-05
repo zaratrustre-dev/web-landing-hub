@@ -16,6 +16,10 @@ dist-ssr
 .nitro
 *.local
 
+# Supabase CLI secrets (env() en supabase/config.toml) — nunca commitear
+.env
+!.env.example
+
 # Wrangler / Cloudflare
 .wrangler/
 .dev.vars
