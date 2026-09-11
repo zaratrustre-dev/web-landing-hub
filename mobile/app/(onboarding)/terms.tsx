@@ -27,7 +27,7 @@ export default function TermsScreen() {
       await refreshProfile();
       router.replace("/");
     } catch (err) {
-      setError(getErrorMessage(err, "No se pudo continuar."));
+      setError(getErrorMessage(err, "Something went wrong. Please try again."));
     } finally {
       setAccepting(false);
     }
@@ -35,33 +35,33 @@ export default function TermsScreen() {
 
   return (
     <Screen>
-      <Text style={styles.title}>Términos y Condiciones</Text>
+      <Text style={styles.title}>Terms and Conditions</Text>
       <Text style={styles.body}>
-        Bienvenido a Connect-it. Al continuar, confirmas que has leído y aceptas nuestros
-        Términos de Servicio y nuestra Política de Privacidad, que explican cómo tratamos tu
-        información y las reglas de convivencia de la comunidad profesional de Connect-it.
+        Welcome to Connect-it. By continuing, you confirm that you have read and agree to our
+        Terms of Service and Privacy Policy, which explain how we handle your information and
+        the community guidelines of Connect-it&apos;s professional network.
         {"\n\n"}
-        Connect-it es una plataforma de networking profesional. No está permitido su uso con
-        fines ajenos al desarrollo profesional, ni contenido ofensivo, spam o suplantación de
-        identidad.
+        Connect-it is a professional networking platform. It may not be used for purposes
+        unrelated to professional development, nor for offensive content, spam, or
+        impersonation.
       </Text>
 
       <Checkbox
         checked={marketingConsent}
         onToggle={() => setMarketingConsent((v) => !v)}
-        label="Comunicaciones comerciales"
-        description="Quiero recibir novedades, ofertas y comunicaciones de marketing de Connect-it. Opcional, no afecta al registro."
+        label="Marketing communications"
+        description="I want to receive news, offers, and marketing communications from Connect-it. Optional, does not affect registration."
       />
       <Checkbox
         checked={radarEnabled}
         onToggle={() => setRadarEnabled((v) => !v)}
-        label="Activar Radar"
-        description="Acepto ser visible/localizable para oportunidades laborales. Opcional, puedes cambiarlo después en ajustes."
+        label="Enable Radar"
+        description="I agree to be visible/discoverable for job opportunities. Optional, you can change this later in settings."
       />
 
       {error ? <Text style={styles.error}>{error}</Text> : null}
-      <Button title="Aceptar y continuar" loading={accepting} onPress={handleAccept} />
-      <DevSignOutLink />
+      <Button title="Accept and continue" loading={accepting} onPress={handleAccept} />
+      <DevSignOutLink label="Sign out (test)" />
     </Screen>
   );
 }
