@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect } from "react";
 
 import { signOut, useIsAdmin, useSession } from "@/lib/auth";
@@ -69,9 +69,42 @@ function AdminDashboardPage() {
           </button>
         </div>
         <p className="mt-2 text-sm text-muted-foreground">Sesión: {session.user.email}</p>
-        <div className="mt-8 rounded-2xl border border-dashed border-border p-8 text-center text-sm text-muted-foreground">
-          Aquí irá la gestión de usuarios, moderación y el resto de Fase 2. Login con Google y
-          verificación de rol admin ya funcionan.
+        <div className="mt-8 flex flex-col gap-4">
+          <div className="flex flex-wrap gap-3">
+            <Link
+              to="/admin/users"
+              className="inline-flex w-fit items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+            >
+              Ver usuarios
+            </Link>
+            <Link
+              to="/admin/ads"
+              className="inline-flex w-fit items-center gap-2 rounded-md border border-input px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-accent"
+            >
+              Anuncios
+            </Link>
+            <Link
+              to="/admin/emails"
+              className="inline-flex w-fit items-center gap-2 rounded-md border border-input px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-accent"
+            >
+              Emails
+            </Link>
+            <Link
+              to="/admin/push"
+              className="inline-flex w-fit items-center gap-2 rounded-md border border-input px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-accent"
+            >
+              Notificaciones push
+            </Link>
+            <Link
+              to="/admin/global-chat"
+              className="inline-flex w-fit items-center gap-2 rounded-md border border-input px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-accent"
+            >
+              Chat global
+            </Link>
+          </div>
+          <div className="rounded-2xl border border-dashed border-border p-8 text-center text-sm text-muted-foreground">
+            El resto de Fase 2 (moderación, notificaciones, emails) va aquí más adelante.
+          </div>
         </div>
       </div>
     </div>

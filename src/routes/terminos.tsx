@@ -36,8 +36,8 @@ function TermsPage() {
       <LegalSection heading="2. Perfil profesional">
         <p>
           Tu perfil incluye foto, nombre, edad, profesión (máximo 20 caracteres), hasta 3 skills,
-          una descripción de hasta 200 caracteres y un enlace profesional (Briefcase). Nombre y
-          edad no pueden modificarse después del registro.
+          una descripción de hasta 200 caracteres y un enlace profesional (Portfolio). Nombre y edad
+          no pueden modificarse después del registro.
         </p>
       </LegalSection>
       <LegalSection heading="3. Uso aceptable">
@@ -61,9 +61,8 @@ function TermsPage() {
       </LegalSection>
       <LegalSection heading="6. Eliminación de cuenta">
         <p>
-          Puedes cerrar sesión sin perder la cuenta, o eliminarla de forma permanente desde
-          Ajustes. La eliminación requiere confirmación explícita y borra tu perfil y tus
-          conversaciones.
+          Puedes cerrar sesión sin perder la cuenta, o eliminarla de forma permanente desde Ajustes.
+          La eliminación requiere confirmación explícita y borra tu perfil y tus conversaciones.
         </p>
       </LegalSection>
     </LegalPage>

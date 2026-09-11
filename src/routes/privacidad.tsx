@@ -41,7 +41,7 @@ function PrivacyPage() {
       </LegalSection>
       <LegalSection heading="Qué ven otras personas">
         <p>
-          Tu foto, nombre, edad, profesión, skills, descripción y Briefcase. Tu correo electrónico
+          Tu foto, nombre, edad, profesión, skills, descripción y Portfolio. Tu correo electrónico
           nunca se muestra en la aplicación.
         </p>
       </LegalSection>

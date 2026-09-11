@@ -422,3 +422,48 @@ enabled = true
 # declarative_schema_path = "./schemas"
 # JSON string passed through to pg-delta SQL formatting.
 # format_options = "{\"keywordCase\":\"upper\",\"indent\":2,\"maxWidth\":80,\"commaStyle\":\"trailing\"}"
+
+[functions.admin-users]
+enabled = true
+# auth: 'user' en el handler ya exige un JWT válido; dejamos también la
+# comprobación de plataforma activada como capa extra.
+verify_jwt = true
+
+[functions.send-push]
+enabled = true
+# auth: 'user' en el handler ya exige un JWT válido (mismo patrón que admin-users).
+verify_jwt = true
+import_map = "./functions/send-push/deno.json"
+import_map = "./functions/admin-users/deno.json"
+# Uncomment to specify a custom file path to the entrypoint.
+# Supported file extensions are: .ts, .js, .mjs, .jsx, .tsx
+entrypoint = "./functions/admin-users/index.ts"
+# Specifies static files to be bundled with the function. Supports glob patterns.
+# For example, if you want to serve static HTML pages in your function:
+# static_files = [ "./functions/admin-users/*.html" ]
+
+[functions.send-email]
+enabled = true
+verify_jwt = false
+import_map = "./functions/send-email/deno.json"
+# Uncomment to specify a custom file path to the entrypoint.
+# Supported file extensions are: .ts, .js, .mjs, .jsx, .tsx
+
+[functions.user-lifecycle-emails]
+enabled = true
+# La llama un trigger de Postgres (pg_net), no un usuario logueado: no hay
+# JWT de usuario que verificar. La autenticación real es el header
+# X-Webhook-Secret comprobado a mano dentro de la función.
+verify_jwt = false
+import_map = "./functions/user-lifecycle-emails/deno.json"
+
+[functions.payment-webhook]
+enabled = true
+# La llama Stripe directamente: no hay JWT de usuario. La autenticación
+# real es la firma del webhook (stripe-signature), verificada a mano.
+verify_jwt = false
+import_map = "./functions/payment-webhook/deno.json"
+entrypoint = "./functions/send-email/index.ts"
+# Specifies static files to be bundled with the function. Supports glob patterns.
+# For example, if you want to serve static HTML pages in your function:
+# static_files = [ "./functions/send-email/*.html" ]

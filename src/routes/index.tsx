@@ -248,7 +248,7 @@ function Landing() {
               <div className="ml-8 rounded-2xl bg-coral/10 p-3 ring-1 ring-coral/10">
                 <p className="text-sm leading-relaxed text-ink">
                   <span className="font-semibold text-coral-deep">Tú:</span> He trabajado en tres.
-                  Te comparto mi Briefcase.
+                  Te comparto mi Portfolio.
                 </p>
               </div>
             </div>

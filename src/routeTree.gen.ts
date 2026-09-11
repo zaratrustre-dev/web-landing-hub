@@ -15,7 +15,19 @@ import { Route as PrivacidadRouteImport } from './routes/privacidad'
 import { Route as SoporteRouteImport } from './routes/soporte'
 import { Route as TerminosRouteImport } from './routes/terminos'
 import { Route as AdminIndexRouteImport } from './routes/admin.index'
+import { Route as AdminAdsRouteImport } from './routes/admin.ads'
+import { Route as AdminEmailsRouteImport } from './routes/admin.emails'
+import { Route as AdminGlobalChatRouteImport } from './routes/admin.global-chat'
 import { Route as AdminLoginRouteImport } from './routes/admin.login'
+import { Route as AdminPushRouteImport } from './routes/admin.push'
+import { Route as AdminUsersRouteImport } from './routes/admin.users'
+import { Route as AdminAdsIndexRouteImport } from './routes/admin.ads.index'
+import { Route as AdminAdsAdIdRouteImport } from './routes/admin.ads.$adId'
+import { Route as AdminEmailsIndexRouteImport } from './routes/admin.emails.index'
+import { Route as AdminGlobalChatIndexRouteImport } from './routes/admin.global-chat.index'
+import { Route as AdminPushIndexRouteImport } from './routes/admin.push.index'
+import { Route as AdminUsersIndexRouteImport } from './routes/admin.users.index'
+import { Route as AdminUsersUserIdRouteImport } from './routes/admin.users.$userId'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -47,10 +59,70 @@ const AdminIndexRoute = AdminIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminAdsRoute = AdminAdsRouteImport.update({
+  id: '/ads',
+  path: '/ads',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminEmailsRoute = AdminEmailsRouteImport.update({
+  id: '/emails',
+  path: '/emails',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminGlobalChatRoute = AdminGlobalChatRouteImport.update({
+  id: '/global-chat',
+  path: '/global-chat',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminLoginRoute = AdminLoginRouteImport.update({
   id: '/login',
   path: '/login',
   getParentRoute: () => AdminRoute,
+} as any)
+const AdminPushRoute = AdminPushRouteImport.update({
+  id: '/push',
+  path: '/push',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminUsersRoute = AdminUsersRouteImport.update({
+  id: '/users',
+  path: '/users',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminAdsIndexRoute = AdminAdsIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AdminAdsRoute,
+} as any)
+const AdminAdsAdIdRoute = AdminAdsAdIdRouteImport.update({
+  id: '/$adId',
+  path: '/$adId',
+  getParentRoute: () => AdminAdsRoute,
+} as any)
+const AdminEmailsIndexRoute = AdminEmailsIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AdminEmailsRoute,
+} as any)
+const AdminGlobalChatIndexRoute = AdminGlobalChatIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AdminGlobalChatRoute,
+} as any)
+const AdminPushIndexRoute = AdminPushIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AdminPushRoute,
+} as any)
+const AdminUsersIndexRoute = AdminUsersIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AdminUsersRoute,
+} as any)
+const AdminUsersUserIdRoute = AdminUsersUserIdRouteImport.update({
+  id: '/$userId',
+  path: '/$userId',
+  getParentRoute: () => AdminUsersRoute,
 } as any)
 
 export interface FileRoutesByFullPath {
@@ -59,8 +131,20 @@ export interface FileRoutesByFullPath {
   '/privacidad': typeof PrivacidadRoute
   '/soporte': typeof SoporteRoute
   '/terminos': typeof TerminosRoute
+  '/admin/ads': typeof AdminAdsRouteWithChildren
+  '/admin/emails': typeof AdminEmailsRouteWithChildren
+  '/admin/global-chat': typeof AdminGlobalChatRouteWithChildren
   '/admin/login': typeof AdminLoginRoute
+  '/admin/push': typeof AdminPushRouteWithChildren
+  '/admin/users': typeof AdminUsersRouteWithChildren
   '/admin/': typeof AdminIndexRoute
+  '/admin/ads/$adId': typeof AdminAdsAdIdRoute
+  '/admin/users/$userId': typeof AdminUsersUserIdRoute
+  '/admin/ads/': typeof AdminAdsIndexRoute
+  '/admin/emails/': typeof AdminEmailsIndexRoute
+  '/admin/global-chat/': typeof AdminGlobalChatIndexRoute
+  '/admin/push/': typeof AdminPushIndexRoute
+  '/admin/users/': typeof AdminUsersIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -69,6 +153,13 @@ export interface FileRoutesByTo {
   '/terminos': typeof TerminosRoute
   '/admin/login': typeof AdminLoginRoute
   '/admin': typeof AdminIndexRoute
+  '/admin/ads/$adId': typeof AdminAdsAdIdRoute
+  '/admin/users/$userId': typeof AdminUsersUserIdRoute
+  '/admin/ads': typeof AdminAdsIndexRoute
+  '/admin/emails': typeof AdminEmailsIndexRoute
+  '/admin/global-chat': typeof AdminGlobalChatIndexRoute
+  '/admin/push': typeof AdminPushIndexRoute
+  '/admin/users': typeof AdminUsersIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -77,8 +168,20 @@ export interface FileRoutesById {
   '/privacidad': typeof PrivacidadRoute
   '/soporte': typeof SoporteRoute
   '/terminos': typeof TerminosRoute
+  '/admin/ads': typeof AdminAdsRouteWithChildren
+  '/admin/emails': typeof AdminEmailsRouteWithChildren
+  '/admin/global-chat': typeof AdminGlobalChatRouteWithChildren
   '/admin/login': typeof AdminLoginRoute
+  '/admin/push': typeof AdminPushRouteWithChildren
+  '/admin/users': typeof AdminUsersRouteWithChildren
   '/admin/': typeof AdminIndexRoute
+  '/admin/ads/$adId': typeof AdminAdsAdIdRoute
+  '/admin/users/$userId': typeof AdminUsersUserIdRoute
+  '/admin/ads/': typeof AdminAdsIndexRoute
+  '/admin/emails/': typeof AdminEmailsIndexRoute
+  '/admin/global-chat/': typeof AdminGlobalChatIndexRoute
+  '/admin/push/': typeof AdminPushIndexRoute
+  '/admin/users/': typeof AdminUsersIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -88,10 +191,35 @@ export interface FileRouteTypes {
     | '/privacidad'
     | '/soporte'
     | '/terminos'
+    | '/admin/ads'
+    | '/admin/emails'
+    | '/admin/global-chat'
     | '/admin/login'
+    | '/admin/push'
+    | '/admin/users'
     | '/admin/'
+    | '/admin/ads/$adId'
+    | '/admin/users/$userId'
+    | '/admin/ads/'
+    | '/admin/emails/'
+    | '/admin/global-chat/'
+    | '/admin/push/'
+    | '/admin/users/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/privacidad' | '/soporte' | '/terminos' | '/admin/login' | '/admin'
+  to:
+    | '/'
+    | '/privacidad'
+    | '/soporte'
+    | '/terminos'
+    | '/admin/login'
+    | '/admin'
+    | '/admin/ads/$adId'
+    | '/admin/users/$userId'
+    | '/admin/ads'
+    | '/admin/emails'
+    | '/admin/global-chat'
+    | '/admin/push'
+    | '/admin/users'
   id:
     | '__root__'
     | '/'
@@ -99,8 +227,20 @@ export interface FileRouteTypes {
     | '/privacidad'
     | '/soporte'
     | '/terminos'
+    | '/admin/ads'
+    | '/admin/emails'
+    | '/admin/global-chat'
     | '/admin/login'
+    | '/admin/push'
+    | '/admin/users'
     | '/admin/'
+    | '/admin/ads/$adId'
+    | '/admin/users/$userId'
+    | '/admin/ads/'
+    | '/admin/emails/'
+    | '/admin/global-chat/'
+    | '/admin/push/'
+    | '/admin/users/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -155,6 +295,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminIndexRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/ads': {
+      id: '/admin/ads'
+      path: '/ads'
+      fullPath: '/admin/ads'
+      preLoaderRoute: typeof AdminAdsRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/emails': {
+      id: '/admin/emails'
+      path: '/emails'
+      fullPath: '/admin/emails'
+      preLoaderRoute: typeof AdminEmailsRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/global-chat': {
+      id: '/admin/global-chat'
+      path: '/global-chat'
+      fullPath: '/admin/global-chat'
+      preLoaderRoute: typeof AdminGlobalChatRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/login': {
       id: '/admin/login'
       path: '/login'
@@ -162,16 +323,153 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminLoginRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/push': {
+      id: '/admin/push'
+      path: '/push'
+      fullPath: '/admin/push'
+      preLoaderRoute: typeof AdminPushRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/users': {
+      id: '/admin/users'
+      path: '/users'
+      fullPath: '/admin/users'
+      preLoaderRoute: typeof AdminUsersRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/ads/': {
+      id: '/admin/ads/'
+      path: '/'
+      fullPath: '/admin/ads/'
+      preLoaderRoute: typeof AdminAdsIndexRouteImport
+      parentRoute: typeof AdminAdsRoute
+    }
+    '/admin/ads/$adId': {
+      id: '/admin/ads/$adId'
+      path: '/$adId'
+      fullPath: '/admin/ads/$adId'
+      preLoaderRoute: typeof AdminAdsAdIdRouteImport
+      parentRoute: typeof AdminAdsRoute
+    }
+    '/admin/emails/': {
+      id: '/admin/emails/'
+      path: '/'
+      fullPath: '/admin/emails/'
+      preLoaderRoute: typeof AdminEmailsIndexRouteImport
+      parentRoute: typeof AdminEmailsRoute
+    }
+    '/admin/global-chat/': {
+      id: '/admin/global-chat/'
+      path: '/'
+      fullPath: '/admin/global-chat/'
+      preLoaderRoute: typeof AdminGlobalChatIndexRouteImport
+      parentRoute: typeof AdminGlobalChatRoute
+    }
+    '/admin/push/': {
+      id: '/admin/push/'
+      path: '/'
+      fullPath: '/admin/push/'
+      preLoaderRoute: typeof AdminPushIndexRouteImport
+      parentRoute: typeof AdminPushRoute
+    }
+    '/admin/users/': {
+      id: '/admin/users/'
+      path: '/'
+      fullPath: '/admin/users/'
+      preLoaderRoute: typeof AdminUsersIndexRouteImport
+      parentRoute: typeof AdminUsersRoute
+    }
+    '/admin/users/$userId': {
+      id: '/admin/users/$userId'
+      path: '/$userId'
+      fullPath: '/admin/users/$userId'
+      preLoaderRoute: typeof AdminUsersUserIdRouteImport
+      parentRoute: typeof AdminUsersRoute
+    }
   }
 }
 
+interface AdminAdsRouteChildren {
+  AdminAdsAdIdRoute: typeof AdminAdsAdIdRoute
+  AdminAdsIndexRoute: typeof AdminAdsIndexRoute
+}
+
+const AdminAdsRouteChildren: AdminAdsRouteChildren = {
+  AdminAdsAdIdRoute: AdminAdsAdIdRoute,
+  AdminAdsIndexRoute: AdminAdsIndexRoute,
+}
+
+const AdminAdsRouteWithChildren = AdminAdsRoute._addFileChildren(
+  AdminAdsRouteChildren,
+)
+
+interface AdminEmailsRouteChildren {
+  AdminEmailsIndexRoute: typeof AdminEmailsIndexRoute
+}
+
+const AdminEmailsRouteChildren: AdminEmailsRouteChildren = {
+  AdminEmailsIndexRoute: AdminEmailsIndexRoute,
+}
+
+const AdminEmailsRouteWithChildren = AdminEmailsRoute._addFileChildren(
+  AdminEmailsRouteChildren,
+)
+
+interface AdminGlobalChatRouteChildren {
+  AdminGlobalChatIndexRoute: typeof AdminGlobalChatIndexRoute
+}
+
+const AdminGlobalChatRouteChildren: AdminGlobalChatRouteChildren = {
+  AdminGlobalChatIndexRoute: AdminGlobalChatIndexRoute,
+}
+
+const AdminGlobalChatRouteWithChildren = AdminGlobalChatRoute._addFileChildren(
+  AdminGlobalChatRouteChildren,
+)
+
+interface AdminPushRouteChildren {
+  AdminPushIndexRoute: typeof AdminPushIndexRoute
+}
+
+const AdminPushRouteChildren: AdminPushRouteChildren = {
+  AdminPushIndexRoute: AdminPushIndexRoute,
+}
+
+const AdminPushRouteWithChildren = AdminPushRoute._addFileChildren(
+  AdminPushRouteChildren,
+)
+
+interface AdminUsersRouteChildren {
+  AdminUsersUserIdRoute: typeof AdminUsersUserIdRoute
+  AdminUsersIndexRoute: typeof AdminUsersIndexRoute
+}
+
+const AdminUsersRouteChildren: AdminUsersRouteChildren = {
+  AdminUsersUserIdRoute: AdminUsersUserIdRoute,
+  AdminUsersIndexRoute: AdminUsersIndexRoute,
+}
+
+const AdminUsersRouteWithChildren = AdminUsersRoute._addFileChildren(
+  AdminUsersRouteChildren,
+)
+
 interface AdminRouteChildren {
+  AdminAdsRoute: typeof AdminAdsRouteWithChildren
+  AdminEmailsRoute: typeof AdminEmailsRouteWithChildren
+  AdminGlobalChatRoute: typeof AdminGlobalChatRouteWithChildren
   AdminLoginRoute: typeof AdminLoginRoute
+  AdminPushRoute: typeof AdminPushRouteWithChildren
+  AdminUsersRoute: typeof AdminUsersRouteWithChildren
   AdminIndexRoute: typeof AdminIndexRoute
 }
 
 const AdminRouteChildren: AdminRouteChildren = {
+  AdminAdsRoute: AdminAdsRouteWithChildren,
+  AdminEmailsRoute: AdminEmailsRouteWithChildren,
+  AdminGlobalChatRoute: AdminGlobalChatRouteWithChildren,
   AdminLoginRoute: AdminLoginRoute,
+  AdminPushRoute: AdminPushRouteWithChildren,
+  AdminUsersRoute: AdminUsersRouteWithChildren,
   AdminIndexRoute: AdminIndexRoute,
 }
 

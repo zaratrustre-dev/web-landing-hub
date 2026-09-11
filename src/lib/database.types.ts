@@ -33,7 +33,13 @@ export interface Database {
           role_sought: ProfessionalRole | null;
           profession: string | null;
           description: string | null;
-          briefcase_url: string | null;
+          portfolio_url: string | null;
+          country: string | null;
+          is_blocked: boolean;
+          blocked_at: string | null;
+          marketing_consent: boolean;
+          marketing_consent_at: string | null;
+          radar_enabled: boolean;
           onboarding_completed: boolean;
           created_at: string;
           updated_at: string;
@@ -176,6 +182,11 @@ export interface Database {
           recipient_email: string;
           subject: string;
           status: "queued" | "sent" | "failed";
+          provider: "resend" | "brevo" | null;
+          email_type: "transactional" | "commercial" | null;
+          recipient_user_id: string | null;
+          external_template_id: string | null;
+          error_message: string | null;
           created_at: string;
         };
         Insert: {
@@ -185,8 +196,63 @@ export interface Database {
           recipient_email: string;
           subject: string;
           status?: "queued" | "sent" | "failed";
+          provider?: "resend" | "brevo" | null;
+          email_type?: "transactional" | "commercial" | null;
+          recipient_user_id?: string | null;
+          external_template_id?: string | null;
+          error_message?: string | null;
         };
         Update: Partial<Database["public"]["Tables"]["email_log"]["Row"]>;
+      };
+      ads: {
+        Row: {
+          id: string;
+          title: string;
+          media_type: "image" | "video";
+          media_url: string;
+          link_url: string | null;
+          periodicity_likes: number;
+          is_active: boolean;
+          last_shown_at: string | null;
+          created_by: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          title: string;
+          media_type: "image" | "video";
+          media_url: string;
+          link_url?: string | null;
+          periodicity_likes?: number;
+          is_active?: boolean;
+          created_by?: string | null;
+        };
+        Update: Partial<Database["public"]["Tables"]["ads"]["Row"]>;
+      };
+      push_log: {
+        Row: {
+          id: string;
+          recipient_user_id: string | null;
+          token: string;
+          title: string;
+          body: string;
+          status: "sent" | "failed";
+          error_message: string | null;
+          sent_by: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          recipient_user_id?: string | null;
+          token: string;
+          title: string;
+          body: string;
+          status: "sent" | "failed";
+          error_message?: string | null;
+          sent_by?: string | null;
+        };
+        Update: Partial<Database["public"]["Tables"]["push_log"]["Row"]>;
       };
     };
     Functions: {

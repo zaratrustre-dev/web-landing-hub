@@ -37,3 +37,9 @@ dist-ssr
 package-lock.json
 *.patch
 supabase/snippets/
+
+.env.production
+.env.local
+
+connect-it_mobile-app.zip
+.vscode/
