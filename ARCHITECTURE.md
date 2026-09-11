@@ -1,181 +1,132 @@
-﻿Ejecutó un comando
+# Arquitectura - Connect-it
 
-\# Arquitectura - Connect-it
+> Generado a partir de una exploración real del código el 09/09/2026, actualizado
+> el 11/09/2026. Mantener actualizado tras cambios estructurales - un
+> ARCHITECTURE.md desactualizado es peor que no tenerlo, porque lleva a asumir
+> cosas que ya no son ciertas.
 
+## Visión general
 
+Connect-it es un **monorepo** con dos frontends independientes que comparten
+**un único backend de Supabase** (`cucvqfhucmjphjpquivn`, `eu-west-1`):
 
-> Generado a partir de una exploración real del código el 09/09/2026. Mantener
-
-> actualizado tras cambios estructurales - un ARCHITECTURE.md desactualizado
-
-> es peor que no tenerlo, porque lleva a asumir cosas que ya no son ciertas.
-
-
-
-\## Visión general
-
-
-
-Connect-it es un \*\*monorepo\*\* con dos frontends independientes que comparten
-
-\*\*un único backend de Supabase\*\* (`cucvqfhucmjphjpquivn`, `eu-west-1`):
-
-
-
-1\. \*\*Panel de administración (web)\*\* - en la raíz del repo. Stack: TanStack
-
-&#x20;  Start (React 19, SSR) + Tailwind v4 + shadcn/Radix, desplegado en
-
-&#x20;  Cloudflare Workers (Nitro). Vive en la raíz (no en `web/`) para no romper
-
-&#x20;  la sincronización con Lovable.dev.
-
-2\. \*\*App móvil\*\* - en `mobile/`. Stack: Expo SDK 57 + React Native +
-
-&#x20;  expo-router (file-based routing), soporte Web incluido
-
-&#x20;  (`react-native-web`) para poder probar sin build nativo.
-
-
+1. **Panel de administración (web)** - en la raíz del repo. Stack: TanStack
+   Start (React 19, SSR) + Tailwind v4 + shadcn/Radix, desplegado en
+   Cloudflare Workers (Nitro). Vive en la raíz (no en `web/`) para no romper
+   la sincronización con Lovable.dev.
+2. **App móvil** - en `mobile/`. Stack: Expo SDK 57 + React Native +
+   expo-router (file-based routing), soporte Web incluido
+   (`react-native-web`) para poder probar sin build nativo.
 
 No hay backend propio de aplicación: toda la lógica de servidor vive en
-
-\*\*Supabase\*\* (Postgres + RLS + Edge Functions), consultado directamente
-
-desde ambos clientes con `@supabase/supabase-js`. Patrón: \*\*BaaS con clientes
-
-finos\*\*, no Clean Architecture ni MVC - la "capa de dominio" son las
-
+**Supabase** (Postgres + RLS + Edge Functions), consultado directamente
+desde ambos clientes con `@supabase/supabase-js`. Patrón: **BaaS con clientes
+finos**, no Clean Architecture ni MVC - la "capa de dominio" son las
 funciones exportadas de `lib/` en cada cliente, que envuelven llamadas a
-
 Supabase.
 
+## Estructura del proyecto
 
-
-\## Estructura del proyecto
-
+```
 web-landing-hub/
+├── src/                          <- Panel admin (raíz, no mover - sync Lovable)
+│   ├── routes/                   <- Rutas TanStack Start (file-based, prefijo admin.*)
+│   ├── components/ui/            <- Componentes shadcn/Radix
+│   ├── lib/
+│   │   ├── supabase.ts           <- Cliente Supabase (browser)
+│   │   ├── admin.ts              <- Funciones que llaman RPCs de admin (RpcFn cast)
+│   │   ├── auth.ts               <- Login de admin
+│   │   └── database.types.ts     <- Tipos escritos A MANO (sin Docker no hay gen types)
+│   └── hooks/
+├── mobile/                       <- App Expo (carpeta hermana, independiente)
+│   ├── app/                      <- Rutas expo-router (file-based)
+│   │   ├── (auth)/welcome.tsx    <- Login (Google OAuth, único método)
+│   │   ├── (onboarding)/         <- Terms -> Role -> Role Sought -> Create Profile
+│   │   ├── (tabs)/               <- Home, Chat, Store, Settings (tras onboarding)
+│   │   ├── index.tsx             <- Puerta de enrutamiento (redirige según sesión/perfil)
+│   │   └── _layout.tsx           <- Carga de fuentes + AuthProvider + Stack raíz
+│   ├── components/               <- Button, Screen, StepHeader, RoleGrid, Checkbox, etc.
+│   ├── constants/
+│   │   ├── theme.ts               <- Design tokens (extraídos de Figma)
+│   │   └── countries.ts           <- Mapeo ISO→español + getDeviceCountryName()
+│   ├── lib/
+│   │   ├── supabase.ts           <- Cliente Supabase (SecureStore en nativo, localStorage en Web)
+│   │   ├── auth.ts               <- useGoogleSignIn() (nonce cifrado SHA-256)
+│   │   ├── profile.ts            <- CRUD de perfil (UpdateChain/InsertChain cast)
+│   │   └── errors.ts             <- getErrorMessage() - los errores de Supabase no son instanceof Error
+│   └── providers/AuthProvider.tsx <- Contexto de sesión + perfil (useAuth())
+├── supabase/
+│   ├── migrations/               <- 24 migraciones (timestamps reales), única fuente de verdad del esquema
+│   └── functions/                <- Edge Functions (Deno)
+│       └── admin-users, send-email, user-lifecycle-emails, payment-webhook, send-push
+└── docs/connect-it/              <- PDR: 13 archivos (producto, no arquitectura de código)
+```
 
+## Flujo de datos
 
+### App móvil - desde el cliente hasta la base de datos
 
-src/ <- Panel admin (raíz, no mover - sync Lovable)
-
-routes/ <- Rutas TanStack Start (file-based, prefijo admin.\*)
-
-components/ui/ <- Componentes shadcn/Radix
-
-lib/
-
-supabase.ts <- Cliente Supabase (browser)
-
-admin.ts <- Funciones que llaman RPCs de admin (RpcFn cast)
-
-auth.ts <- Login de admin
-
-database.types.ts <- Tipos escritos A MANO (sin Docker no hay gen types)
-
-hooks/
-
-mobile/ <- App Expo (carpeta hermana, independiente)
-
-app/ <- Rutas expo-router (file-based)
-
-(auth)/welcome.tsx <- Login (Google OAuth, único método)
-
-(onboarding)/ <- Terms -> Role -> Role Sought -> Create Profile
-
-(tabs)/ <- Home, Chat, Store, Settings (tras onboarding)
-
-index.tsx <- Puerta de enrutamiento (redirige según sesión/perfil)
-
-\_layout.tsx <- Carga de fuentes + AuthProvider + Stack raíz
-
-components/ <- Button, Screen, StepHeader, RoleGrid, etc.
-
-constants/theme.ts <- Design tokens (extraídos de Figma con get\_design\_context)
-
-lib/
-
-supabase.ts <- Cliente Supabase (SecureStore en nativo, localStorage en Web)
-
-auth.ts <- useGoogleSignIn() (nonce cifrado SHA-256)
-
-profile.ts <- CRUD de perfil (UpdateChain/InsertChain cast)
-
-errors.ts <- getErrorMessage() - los errores de Supabase no son instanceof Error
-
-providers/AuthProvider.tsx <- Contexto de sesión + perfil (useAuth())
-
-supabase/
-
-migrations/ <- 21 migraciones, única fuente de verdad del esquema
-
-functions/ <- Edge Functions (Deno)
-
-admin-users, send-email, user-lifecycle-emails
-
-payment-webhook, send-push
-
-docs/connect-it/ <- PDR: 13 archivos (producto, no arquitectura de código)
-
-
-
-\## Flujo de datos
-
-
-
-\### App móvil - desde el cliente hasta la base de datos
-
-Pantalla (app/\*.tsx)
-
-useAuth() lee { session, profile } del contexto
-
-v
-
+```
+Pantalla (app/*.tsx)
+  │ useAuth() lee { session, profile } del contexto
+  ▼
 providers/AuthProvider.tsx
-
-onAuthStateChange + fetchMyProfile()
-
-v
-
+  │ onAuthStateChange + fetchMyProfile()
+  ▼
 lib/profile.ts, lib/auth.ts
-
-supabase.from("profiles").select/update/insert(...)
-
-supabase.auth.signInWithIdToken(...)
-
-v
-
+  │ supabase.from("profiles").select/update/insert(...)
+  │ supabase.auth.signInWithIdToken(...)
+  ▼
 lib/supabase.ts (cliente supabase-js)
-
-SecureStore (nativo) / localStorage (Web) para persistir sesión
-
-v
-
+  │ SecureStore (nativo) / localStorage (Web) para persistir sesión
+  ▼
 Supabase (Postgres + RLS + triggers) - cucvqfhucmjphjpquivn
+```
 
-
-
-
-
-\*\*Puerta de enrutamiento\*\* (`app/index.tsx`): en cada carga, decide a dónde
-
+**Puerta de enrutamiento** (`app/index.tsx`): en cada carga, decide a dónde
 ir según `session` y `profile` - sin sesión -> `/welcome`; sin
+`terms_accepted_at` -> `/terms`; etc.
+
 **Diseño visual — fuente de verdad:** el archivo de Figma actual es
 `https://www.figma.com/design/LZOS9aaMoqgpwW29BZSpcO/Connect-it` (no otros
-archivos anteriores). Extraer valores reales con `get_design_context` nodo
-por nodo — no aproximar colores/tipografía a mano.
+archivos anteriores). El servidor "Dev Mode" de Figma (desktop, MCP local)
+requiere plan de pago; en su lugar se ha usado el plugin de Figma "Figma to
+Code" (exporta React JSX), corrido manualmente por Jose y pegado a Claude
+para extraer valores/paths reales — no aproximar colores/tipografía a mano.
 
 **Autenticación:** solo Google OAuth en el MVP (`connect-it-auth`). El botón
 "Continue with Apple" se muestra visualmente (así lo pide el diseño real,
 nodo 1:16 del archivo de Figma actual) pero está **deshabilitado** — no hay
-proveedor de Apple configurado en Supabase todavía.
+proveedor de Apple configurado en Supabase todavía. **No crear flujos de
+verificación de email**: Google ya verifica el email antes del login, por lo
+que un paso adicional de verificación sería redundante y requeriría
+duplicar infraestructura (código propio + Resend/Brevo) o añadir
+auth por contraseña, ambos descartados para el MVP.
 
 **Componente `Button` (mobile):** soporta `icon` (elemento opcional a la
 izquierda del texto, usado para el logo de Apple vía `@expo/vector-icons`
-`logo-apple`) y `textStyle` (para el botón de Google, texto negro sobre
-fondo blanco — estándar de marca de Google, distinto del resto de botones
-de la app).
+`logo-apple`, y para el círculo negro con "G" del botón de Google — no es
+el logo multicolor oficial de Google, sino un círculo negro simple con una
+"G" blanca en mono, tal como pide el diseño real) y `textStyle`.
+
+**Componente `DevSignOutLink` (mobile):** reescrito para reutilizar el
+componente `Button` (mismo alto/estilo que "Continuar"), con fondo `#FFA077`
+y texto oscuro `#0D0E0F` (convención del diseño para botones secundarios,
+vista también en el botón "BACK" de Role Sought). Acepta un `label` opcional
+para variar el texto por pantalla sin duplicar el componente (ej. inglés en
+Terms, español en el resto).
+
+**Componente `Checkbox` (mobile):** nuevo, en `components/Checkbox.tsx`.
+Casilla + label + descripción opcional, usa `Ionicons` para el check. Usado
+en Terms para los dos consentimientos opcionales (ver más abajo).
+
+**Detección de país (mobile):** `constants/countries.ts` expone
+`getDeviceCountryName()`, que usa `expo-localization` (región del
+dispositivo, sin red ni permisos) y un mapeo ISO 3166-1 alpha-2 → nombre en
+español **idéntico** al de `src/lib/countries.ts` del panel admin, para que
+el valor de `profiles.country` tenga siempre el mismo formato venga de
+donde venga. Se detecta y guarda automáticamente al completar
+`create-profile.tsx`, sin pedírselo explícitamente al usuario.
 
 ## Estado actual — Fase 1 (auth + onboarding)
 
@@ -183,24 +134,45 @@ Flujo completo funcional en Web (`http://localhost:8081`): Welcome → Terms
 → Role → Role Sought → Create Profile → Home tabs. Verificado de extremo a
 extremo con una cuenta de Google real.
 
-**`DevSignOutLink`** (`components/DevSignOutLink.tsx`): enlace de "salida
-de emergencia" presente en las 4 pantallas de onboarding (Terms, Role, Role
-Sought, Create Profile). Sin esto, quedarse a mitad del onboarding no
-permite cerrar sesión para probar con otra cuenta — Settings (donde vive el
-cierre de sesión "real") solo es alcanzable tras completar TODO el
-onboarding. Solo para pruebas; decidir si se queda o se quita antes de
-producción real.
+**Terms (`app/(onboarding)/terms.tsx`):** texto íntegro en **inglés**
+(única pantalla con este requisito explícito; el resto del onboarding sigue
+en español). Incluye dos checkboxes opcionales, desmarcados por defecto,
+independientes entre sí y de la aceptación de términos:
+- **Marketing communications** → guarda `profiles.marketing_consent`
+  (boolean). `profiles.marketing_consent_at` se rellena solo por un
+  trigger de Postgres (`set_marketing_consent_at`), no hace falta enviarlo
+  desde la app.
+- **Enable Radar** → guarda `profiles.radar_enabled` (boolean).
+
+`lib/profile.ts` → `acceptTerms(userId, { marketingConsent, radarEnabled })`
+guarda ambos junto con `terms_accepted_at`.
 
 **Pendiente de Fase 1:**
-- Sustituir el icono placeholder del logo (emoji ⚡) por el asset SVG real
-  de Figma — no se pudo descargar en el entorno de trabajo actual (bloqueo
-  de red a figma.com tanto en `bash_tool` como en `web_fetch`).
 - Aplicar el mismo tratamiento de extracción real de Figma (colores,
-  tipografía, spacing exactos vía `get_design_context`) a las pantallas de
-  Role, Role Sought, Create Profile y Home — por ahora solo Welcome tiene
-  este tratamiento completo.
+  tipografía, spacing exactos) a las pantallas de Role, Role Sought,
+  Create Profile y Home — por ahora solo Welcome tiene este tratamiento
+  completo. El icono del logo real (SVG desde Figma) y el ícono de Google
+  (círculo negro + "G") ya están aplicados en Welcome.
 - EAS development build para probar Google OAuth en Android/iOS reales
-  (Expo Go no funciona para esto — ver limitación documentada en las
-  conversaciones de esta fase: Google bloquea el intercambio de código
-  OAuth para apps que comparten la identidad de Expo Go).
+  (Expo Go no funciona para esto). **Nota:** para Android hará falta
+  registrar el SHA-1 del certificado de firma (el del keystore que genere
+  EAS, o el de desarrollo) en Google Cloud Console — pendiente hasta llegar
+  a esa fase.
 
+## Historial de sincronización repo↔Supabase (11/09/2026)
+
+La carpeta `mobile/` llevaba tiempo sin subirse a `main` (solo existía en
+local). Se subió en 3 commits:
+1. `mobile/` completo (Fase 1 auth+onboarding).
+2. Fase 2 backend completo: 21 migraciones, Edge Functions, panel admin de
+   ads/emails/chat global/push/users, `docs/connect-it/`. 4 de esas
+   migraciones (`seed_initial_skills`, `security_hardening`,
+   `mobile_app_consolidation`, `fix_name_age_immutable_only_after_onboarding`)
+   nunca existieron como archivo local — se habían aplicado directo contra
+   Supabase y se reconstruyeron leyendo `supabase_migrations.schema_migrations`.
+3. Renombrado de las 24 migraciones a sus timestamps reales de Supabase
+   (antes usaban numeración secuencial local que no coincidía con el
+   `version` interno — importante si en el futuro se usa la Supabase CLI).
+
+Verificado en los 3 commits: cero archivos `.env`/`.env.production`/
+`.env.local` filtrados.
