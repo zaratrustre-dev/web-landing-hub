@@ -1,4 +1,4 @@
-﻿import { Platform } from "react-native";
+import { Platform } from "react-native";
 import { decode } from "base64-arraybuffer";
 import * as FileSystem from "expo-file-system/legacy";
 
@@ -57,9 +57,18 @@ export async function fetchMyProfile(userId: string): Promise<Profile | null> {
   return { ...profileRow, skill_ids: rows.map((s) => s.skill_id) };
 }
 
-export async function acceptTerms(userId: string) {
+export interface AcceptTermsOptions {
+  marketingConsent?: boolean;
+  radarEnabled?: boolean;
+}
+
+export async function acceptTerms(userId: string, options?: AcceptTermsOptions) {
   const { error } = await (supabase.from("profiles") as unknown as UpdateChain)
-    .update({ terms_accepted_at: new Date().toISOString() })
+    .update({
+      terms_accepted_at: new Date().toISOString(),
+      marketing_consent: options?.marketingConsent ?? false,
+      radar_enabled: options?.radarEnabled ?? false,
+    })
     .eq("id", userId);
   if (error) throw error;
 }
@@ -85,6 +94,7 @@ export interface CreateProfileInput {
   description?: string;
   portfolioUrl?: string;
   photoUrl: string;
+  country?: string | null;
 }
 
 export async function saveProfileDetails(userId: string, input: CreateProfileInput) {
@@ -96,6 +106,7 @@ export async function saveProfileDetails(userId: string, input: CreateProfileInp
       description: input.description || null,
       portfolio_url: input.portfolioUrl || null,
       photo_url: input.photoUrl,
+      country: input.country ?? null,
     })
     .eq("id", userId);
   if (error) throw error;

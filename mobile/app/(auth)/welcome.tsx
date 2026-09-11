@@ -2,6 +2,7 @@
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { StyleSheet, Text, View } from "react-native";
+import Svg, { Path } from "react-native-svg";
 
 import { Button } from "@/components/Button";
 import { Screen } from "@/components/Screen";
@@ -22,7 +23,12 @@ export default function WelcomeScreen() {
       <View style={styles.content}>
         <View style={styles.hero}>
           <View style={styles.logoBadge}>
-            <Text style={styles.logoGlyph}>⚡</Text>
+            <Svg width={36} height={32} viewBox="0 0 36 32" fill="none">
+              <Path
+                d="M30 22V18H34C34.5667 18 35.0417 18.1917 35.425 18.575C35.8083 18.9583 36 19.4333 36 20C36 20.5667 35.8083 21.0417 35.425 21.425C35.0417 21.8083 34.5667 22 34 22H30ZM30 30V26H34C34.5667 26 35.0417 26.1917 35.425 26.575C35.8083 26.9583 36 27.4333 36 28C36 28.5667 35.8083 29.0417 35.425 29.425C35.0417 29.8083 34.5667 30 34 30H30ZM22 32C20.9 32 19.9583 31.6083 19.175 30.825C18.3917 30.0417 18 29.1 18 28H14V20H18C18 18.9 18.3917 17.9583 19.175 17.175C19.9583 16.3917 20.9 16 22 16H28V32H22ZM8 26C5.8 26 3.91667 25.2167 2.35 23.65C0.783333 22.0833 0 20.2 0 18C0 15.8 0.783333 13.9167 2.35 12.35C3.91667 10.7833 5.8 10 8 10H11C11.8333 10 12.5417 9.70833 13.125 9.125C13.7083 8.54167 14 7.83333 14 7C14 6.16667 13.7083 5.45833 13.125 4.875C12.5417 4.29167 11.8333 4 11 4H4C3.43333 4 2.95833 3.80833 2.575 3.425C2.19167 3.04167 2 2.56667 2 2C2 1.43333 2.19167 0.958333 2.575 0.575C2.95833 0.191667 3.43333 0 4 0H11C12.9333 0 14.5833 0.683333 15.95 2.05C17.3167 3.41667 18 5.06667 18 7C18 8.93333 17.3167 10.5833 15.95 11.95C14.5833 13.3167 12.9333 14 11 14H8C6.9 14 5.95833 14.3917 5.175 15.175C4.39167 15.9583 4 16.9 4 18C4 19.1 4.39167 20.0417 5.175 20.825C5.95833 21.6083 6.9 22 8 22H12V26H8Z"
+                fill={colors.primary}
+              />
+            </Svg>
           </View>
           <Text style={styles.title}>Connect-it</Text>
           <Text style={styles.subtitle}>High-performance network diagnostics.</Text>
@@ -37,6 +43,7 @@ export default function WelcomeScreen() {
             onPress={() => promptAsync()}
             style={styles.googleButton}
             textStyle={styles.googleButtonText}
+            icon={<View style={styles.googleIconCircle}><Text style={styles.googleIconG}>G</Text></View>}
           />
           <Button
             title="Continue with Apple"
@@ -75,7 +82,6 @@ const styles = StyleSheet.create({
     shadowRadius: 10,
     shadowOffset: { width: 0, height: 0 },
   },
-  logoGlyph: { fontSize: 36, color: colors.primary },
   title: {
     fontFamily: fontFamily.heading,
     fontSize: fontSize.display,
@@ -115,4 +121,21 @@ const styles = StyleSheet.create({
   },
   legalLink: { color: colors.text, textDecorationLine: "underline" },
   error: { color: colors.destructive, fontSize: fontSize.sm, textAlign: "center" },
+  googleIconCircle: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: "#000000",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  googleIconG: {
+    color: "#ffffff",
+    fontFamily: fontFamily.mono,
+    fontSize: 10,
+    fontWeight: "600",
+    letterSpacing: 1.2,
+  },
 });
+
+

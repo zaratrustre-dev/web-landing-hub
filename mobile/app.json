@@ -2,7 +2,7 @@
   "expo": {
     "name": "Connect-it",
     "slug": "connect-it",
-"owner": "zaratrustre-dev",
+    "owner": "zaratrustre-dev",
     "version": "1.0.0",
     "scheme": "connectit",
     "orientation": "portrait",
@@ -34,8 +34,8 @@
         {
           "photosPermission": "Connect-it necesita acceso a tus fotos para que puedas elegir tu foto de perfil."
         }
-      ]
+      ],
+      "expo-localization"
     ]
   }
 }
-

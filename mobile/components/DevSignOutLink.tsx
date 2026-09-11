@@ -1,10 +1,15 @@
-﻿import { useState } from "react";
-import { Pressable, StyleSheet, Text } from "react-native";
+import { useState } from "react";
+import { StyleSheet } from "react-native";
 
-import { colors, fontSize, spacing } from "@/constants/theme";
+import { Button } from "@/components/Button";
+import { spacing } from "@/constants/theme";
 import { signOut } from "@/lib/auth";
 
-export function DevSignOutLink() {
+interface DevSignOutLinkProps {
+  label?: string;
+}
+
+export function DevSignOutLink({ label = "Cerrar sesión (test)" }: DevSignOutLinkProps) {
   const [signingOut, setSigningOut] = useState(false);
 
   async function handlePress() {
@@ -17,13 +22,17 @@ export function DevSignOutLink() {
   }
 
   return (
-    <Pressable onPress={handlePress} disabled={signingOut} style={styles.container} hitSlop={8}>
-      <Text style={styles.text}>{signingOut ? "Cerrando sesión…" : "Cerrar sesión (test)"}</Text>
-    </Pressable>
+    <Button
+      title={label}
+      loading={signingOut}
+      onPress={handlePress}
+      style={styles.button}
+      textStyle={styles.text}
+    />
   );
 }
 
 const styles = StyleSheet.create({
-  container: { alignSelf: "center", marginTop: spacing.lg },
-  text: { fontSize: fontSize.xs, color: colors.textFaint, textDecorationLine: "underline" },
+  button: { backgroundColor: "#FFA077", marginTop: spacing.lg },
+  text: { color: "#0D0E0F" },
 });

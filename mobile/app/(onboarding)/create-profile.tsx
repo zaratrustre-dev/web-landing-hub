@@ -18,6 +18,7 @@ import {
   type SkillOption,
 } from "@/lib/profile";
 import { getErrorMessage } from "@/lib/errors";
+import { getDeviceCountryName } from "@/constants/countries";
 import { useAuth } from "@/providers/AuthProvider";
 
 const MAX_PROFESSION = 20;
@@ -76,6 +77,7 @@ export default function CreateProfileScreen() {
       const photoUrl = await uploadProfilePhoto(session.user.id, photoUri);
       await saveProfileDetails(session.user.id, {
         name: name.trim(),
+        country: getDeviceCountryName(),
         age: ageNumber,
         profession: profession.trim(),
         description: description.trim() || undefined,
@@ -189,3 +191,4 @@ const styles = StyleSheet.create({
   button: { marginTop: spacing.xl },
   error: { color: colors.destructive, fontSize: fontSize.sm, marginTop: spacing.md },
 });
+
