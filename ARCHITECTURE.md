@@ -229,6 +229,16 @@ Verificado en los 3 commits: cero archivos `.env`/`.env.production`/
   diferencia de `saveProfileDetails()` que sí las escribe en el
   onboarding). `MenuRow` en `settings.tsx` pasó de `View` a `Pressable`
   para soportar filas navegables además de las deshabilitadas.
+- **Ajustes → Términos y Condiciones**: nueva pantalla
+  `app/view-terms.tsx`. Muestra el mismo texto de Terms (en inglés, igual
+  que `terms(_en).tsx`) más los toggles de Marketing consent y Radar,
+  editables en cualquier momento — tal como el propio texto le dice al
+  usuario ("you can change this later in settings"). No usa
+  `acceptTerms()` ni toca `terms_accepted_at` (eso es solo del onboarding,
+  una vez). Se añadió `marketing_consent` y `radar_enabled` al `Profile` y
+  al `select` de `fetchMyProfile()` (antes no se leían de vuelta), y una
+  nueva función `updateConsent()` en `lib/profile.ts` para guardar solo
+  esos dos campos.
 - Implementado: botón principal de Terms, Role, Role Sought y Create
   Profile ahora al 80% de ancho (`alignSelf: "center"`), igual que el
   criterio ya usado en `DevSignOutLink`. `DevSignOutLink.tsx` queda sin uso

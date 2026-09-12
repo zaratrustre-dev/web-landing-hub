@@ -17,6 +17,8 @@ export interface Profile {
   portfolio_url: string | null;
   terms_accepted_at: string | null;
   onboarding_completed: boolean;
+  marketing_consent: boolean;
+  radar_enabled: boolean;
   skill_ids: string[];
 }
 
@@ -39,7 +41,7 @@ export async function fetchMyProfile(userId: string): Promise<Profile | null> {
   const { data: profile, error } = await supabase
     .from("profiles")
     .select(
-      "id, name, age, photo_url, role, role_sought, profession, description, portfolio_url, terms_accepted_at, onboarding_completed",
+      "id, name, age, photo_url, role, role_sought, profession, description, portfolio_url, terms_accepted_at, onboarding_completed, marketing_consent, radar_enabled",
     )
     .eq("id", userId)
     .maybeSingle();
@@ -68,6 +70,27 @@ export async function acceptTerms(userId: string, options?: AcceptTermsOptions) 
       terms_accepted_at: new Date().toISOString(),
       marketing_consent: options?.marketingConsent ?? false,
       radar_enabled: options?.radarEnabled ?? false,
+    })
+    .eq("id", userId);
+  if (error) throw error;
+}
+
+export interface UpdateConsentOptions {
+  marketingConsent: boolean;
+  radarEnabled: boolean;
+}
+
+/**
+ * Actualiza Marketing consent y Radar desde Ajustes, sin tocar
+ * `terms_accepted_at` (eso solo se fija una vez, al aceptar por primera
+ * vez en el onboarding). Ambos son opcionales y modificables en cualquier
+ * momento — así se lo dice el propio texto de Terms al usuario.
+ */
+export async function updateConsent(userId: string, options: UpdateConsentOptions) {
+  const { error } = await (supabase.from("profiles") as unknown as UpdateChain)
+    .update({
+      marketing_consent: options.marketingConsent,
+      radar_enabled: options.radarEnabled,
     })
     .eq("id", userId);
   if (error) throw error;
