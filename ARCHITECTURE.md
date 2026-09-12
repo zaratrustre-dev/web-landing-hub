@@ -273,6 +273,32 @@ Verificado en los 3 commits: cero archivos `.env`/`.env.production`/
     con `constants/urls.ts` (`https://connect-it.app/p/<userId>` —
     dominio provisional, mismo que `support@connect-it.app`, pendiente de
     confirmar el definitivo).
+- **Ajustes → Eliminar cuenta** (última de las 5 filas, PDR §24 completo):
+  la más delicada de las cinco — requiere borrar de verdad al usuario, no
+  solo su perfil.
+  - Nueva Edge Function `delete-account` (desplegada vía MCP de Supabase,
+    `verify_jwt: true`). A diferencia de `admin-users` (que exige rol
+    admin y borra un `user_id` arbitrario), esta SIEMPRE borra al que
+    llama — nunca acepta un id externo, la única autorización es "eres tú
+    mismo" del JWT. Llama a `auth.admin.deleteUser(callerId)`.
+  - Verificado en el esquema (`profiles_id_fkey`) que `profiles.id`
+    referencia `auth.users(id) ON DELETE CASCADE` — por eso hay que borrar
+    el usuario de `auth.users`, no solo la fila de `profiles`. Desde ahí
+    cascada a `profile_skills`, `likes`, `matches`, `chat_messages`,
+    `global_chat_messages`, `global_chat_rate_limits` y `reports` (todas
+    `ON DELETE CASCADE` hacia `profiles`, confirmado por consulta directa
+    a `pg_constraint`, no solo asumido). `matches.unmatched_by` es `NO
+    ACTION` pero no da problema: la fila del match ya se borra antes por
+    `profile_a`/`profile_b`, así que no hay nada que viole la constraint.
+    La función también borra los archivos del bucket `profile-photos` del
+    usuario (Storage no está atado a la cascada de Postgres).
+  - Mobile: `lib/account.ts` (`deleteMyAccount()`, invoca la Edge
+    Function) + nueva pantalla `app/delete-account.tsx` — exige escribir
+    "ELIMINAR" para habilitar el botón (evita toques accidentales en una
+    acción irreversible), y hace `signOut()` + redirect a Welcome al
+    terminar.
+  - **No implementado a propósito**: página de "descargar tus datos"
+    (GDPR export) — no se pidió y es una feature aparte más grande.
 - Implementado: botón principal de Terms, Role, Role Sought y Create
   Profile ahora al 80% de ancho (`alignSelf: "center"`), igual que el
   criterio ya usado en `DevSignOutLink`. `DevSignOutLink.tsx` queda sin uso

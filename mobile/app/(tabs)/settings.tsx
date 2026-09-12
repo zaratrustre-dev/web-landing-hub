@@ -10,7 +10,7 @@ import { signOut } from "@/lib/auth";
 import { useAuth } from "@/providers/AuthProvider";
 
 // PDR §24: Edit Profile, Terms, Support, Share, Delete Account, Log Out.
-// Edit Profile y Log Out ya están funcionales; el resto son fases futuras.
+// Las 6 ya están funcionales.
 export default function SettingsScreen() {
   const { profile } = useAuth();
   const [signingOut, setSigningOut] = useState(false);
@@ -47,7 +47,11 @@ export default function SettingsScreen() {
         <MenuRow label="Términos y Condiciones" onPress={() => router.push("/view-terms")} />
         <MenuRow label="Soporte" onPress={() => router.push("/support")} />
         <MenuRow label="Compartir cuenta" onPress={() => router.push("/share-profile")} />
-        <MenuRow label="Eliminar cuenta" disabled destructive />
+        <MenuRow
+          label="Eliminar cuenta"
+          destructive
+          onPress={() => router.push("/delete-account")}
+        />
       </View>
 
       <Button title="Cerrar sesión" variant="outline" loading={signingOut} onPress={handleSignOut} />
