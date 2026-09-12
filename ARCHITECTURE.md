@@ -239,6 +239,12 @@ Verificado en los 3 commits: cero archivos `.env`/`.env.production`/
   al `select` de `fetchMyProfile()` (antes no se leían de vuelta), y una
   nueva función `updateConsent()` en `lib/profile.ts` para guardar solo
   esos dos campos.
+- **Ajustes → Soporte**: nueva pantalla estática `app/support.tsx`, mismo
+  contenido y correo (`support@connect-it.app`) que la página web
+  `/soporte` (`src/routes/soporte.tsx`), adaptado a móvil. Secciones:
+  Escríbenos (mailto: vía `Linking.openURL`), Reportar un perfil o
+  conversación, Problemas de acceso, Cuenta y datos. Sin backend ni
+  formulario — es solo info + enlace de correo, como se pidió.
 - Implementado: botón principal de Terms, Role, Role Sought y Create
   Profile ahora al 80% de ancho (`alignSelf: "center"`), igual que el
   criterio ya usado en `DevSignOutLink`. `DevSignOutLink.tsx` queda sin uso
