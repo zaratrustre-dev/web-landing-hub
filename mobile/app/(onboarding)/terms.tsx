@@ -59,7 +59,12 @@ export default function TermsScreen() {
       />
 
       {error ? <Text style={styles.error}>{error}</Text> : null}
-      <Button title="Accept and continue" loading={accepting} onPress={handleAccept} />
+      <Button
+        title="Accept and continue"
+        loading={accepting}
+        onPress={handleAccept}
+        style={styles.button}
+      />
     </Screen>
   );
 }
@@ -68,4 +73,5 @@ const styles = StyleSheet.create({
   title: { fontSize: fontSize.xxl, fontWeight: "700", color: colors.text, marginBottom: spacing.md },
   body: { fontSize: fontSize.base, color: colors.textMuted, lineHeight: 24, marginBottom: spacing.xl },
   error: { color: colors.destructive, fontSize: fontSize.sm, marginBottom: spacing.md },
+  button: { width: "80%", alignSelf: "center" },
 });

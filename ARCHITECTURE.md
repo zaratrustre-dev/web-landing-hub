@@ -168,10 +168,13 @@ desarrollo en la pantalla **Home**.
   registrar el SHA-1 del certificado de firma (el del keystore que genere
   EAS, o el de desarrollo) en Google Cloud Console — pendiente hasta llegar
   a esa fase.
-- Logout desde Ajustes/Settings debe redirigir siempre a `/(auth)/welcome`
-  (decisión tomada, aún no implementada en código).
-- Reducir un 20% el ancho de los botones largos (full-width) del flujo de
-  registro (decisión tomada, aún no implementada en código).
+- ~~Logout desde Ajustes/Settings debe redirigir siempre a `/(auth)/welcome`~~
+  — implementado el 12/09/2026 (`router.replace` tras `signOut()` en
+  `settings.tsx`).
+- ~~Reducir un 20% el ancho de los botones largos (full-width) del flujo de
+  registro~~ — implementado el 12/09/2026: `width: "80%", alignSelf:
+  "center"` en el botón principal de `terms.tsx`, `terms_en.tsx`,
+  `role.tsx`, `role-sought.tsx` y `create-profile.tsx`.
 
 ## Historial de sincronización repo↔Supabase (11/09/2026)
 
@@ -211,3 +214,12 @@ Verificado en los 3 commits: cero archivos `.env`/`.env.production`/
   tal como están en `main` — no se encontró bug en el código estático.
   Pendiente de confirmar si el síntoma persiste con la misma cuenta (no una
   recreada) antes de investigar más.
+- Implementado: `handleSignOut` en `settings.tsx` ahora hace
+  `router.replace("/(auth)/welcome")` justo después de `signOut()` (antes
+  no navegaba explícitamente; sin esto, `Redirect` de `app/index.tsx` no se
+  vuelve a evaluar porque Settings queda montado sobre la misma ruta).
+- Implementado: botón principal de Terms, Role, Role Sought y Create
+  Profile ahora al 80% de ancho (`alignSelf: "center"`), igual que el
+  criterio ya usado en `DevSignOutLink`. `DevSignOutLink.tsx` queda sin uso
+  en ninguna pantalla por ahora (se mantiene el componente por si se
+  requiere en Ajustes más adelante).

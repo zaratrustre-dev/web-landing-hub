@@ -56,6 +56,6 @@ export default function RoleSoughtScreen() {
 }
 
 const styles = StyleSheet.create({
-  button: { marginTop: spacing.xl },
+  button: { marginTop: spacing.xl, width: "80%", alignSelf: "center" },
   error: { color: colors.destructive, fontSize: fontSize.sm, marginTop: spacing.md },
 });

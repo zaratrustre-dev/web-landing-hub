@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { router } from "expo-router";
 import { Image, StyleSheet, Text, View } from "react-native";
 
 import { Button } from "@/components/Button";
@@ -19,6 +20,7 @@ export default function SettingsScreen() {
     setSigningOut(true);
     try {
       await signOut();
+      router.replace("/(auth)/welcome");
     } finally {
       setSigningOut(false);
     }

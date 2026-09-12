@@ -186,7 +186,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
     marginBottom: spacing.sm,
   },
-  button: { marginTop: spacing.xl },
+  button: { marginTop: spacing.xl, width: "80%", alignSelf: "center" },
   error: { color: colors.destructive, fontSize: fontSize.sm, marginTop: spacing.md },
 });
 
