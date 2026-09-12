@@ -218,6 +218,17 @@ Verificado en los 3 commits: cero archivos `.env`/`.env.production`/
   `router.replace("/(auth)/welcome")` justo después de `signOut()` (antes
   no navegaba explícitamente; sin esto, `Redirect` de `app/index.tsx` no se
   vuelve a evaluar porque Settings queda montado sobre la misma ruta).
+- **Ajustes → Editar perfil** (primera sub-sección de Settings en
+  implementarse, de las 5 marcadas "Próximamente"): nueva pantalla
+  `app/edit-profile.tsx` (ruta raíz, fuera de `(tabs)`, empujada con
+  `router.push` desde el `MenuRow` de Settings). Permite editar foto,
+  profesión, descripción, portfolio/CV/LinkedIn y skills (máx. 3, mismo
+  `SkillPicker` que Create Profile). **Nombre y edad se muestran de solo
+  lectura** — regla PDR: inmutables tras el onboarding. Nueva función
+  `updateProfileDetails()` en `lib/profile.ts` (no toca `name`/`age`, a
+  diferencia de `saveProfileDetails()` que sí las escribe en el
+  onboarding). `MenuRow` en `settings.tsx` pasó de `View` a `Pressable`
+  para soportar filas navegables además de las deshabilitadas.
 - Implementado: botón principal de Terms, Role, Role Sought y Create
   Profile ahora al 80% de ancho (`alignSelf: "center"`), igual que el
   criterio ya usado en `DevSignOutLink`. `DevSignOutLink.tsx` queda sin uso

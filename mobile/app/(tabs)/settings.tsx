@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { router } from "expo-router";
-import { Image, StyleSheet, Text, View } from "react-native";
+import { Image, Pressable, StyleSheet, Text, View } from "react-native";
 
 import { Button } from "@/components/Button";
 import { Screen } from "@/components/Screen";
@@ -10,8 +10,7 @@ import { signOut } from "@/lib/auth";
 import { useAuth } from "@/providers/AuthProvider";
 
 // PDR §24: Edit Profile, Terms, Support, Share, Delete Account, Log Out.
-// Solo Log Out está funcional en esta fase — el resto son parte de fases
-// futuras (Edit Profile en Fase 2, junto con Discovery/perfil completo).
+// Edit Profile y Log Out ya están funcionales; el resto son fases futuras.
 export default function SettingsScreen() {
   const { profile } = useAuth();
   const [signingOut, setSigningOut] = useState(false);
@@ -44,7 +43,7 @@ export default function SettingsScreen() {
       </View>
 
       <View style={styles.menu}>
-        <MenuRow label="Editar perfil" disabled />
+        <MenuRow label="Editar perfil" onPress={() => router.push("/edit-profile")} />
         <MenuRow label="Términos y Condiciones" disabled />
         <MenuRow label="Soporte" disabled />
         <MenuRow label="Compartir cuenta" disabled />
@@ -60,16 +59,22 @@ function MenuRow({
   label,
   disabled,
   destructive,
+  onPress,
 }: {
   label: string;
   disabled?: boolean;
   destructive?: boolean;
+  onPress?: () => void;
 }) {
   return (
-    <View style={[styles.menuRow, disabled && styles.menuRowDisabled]}>
+    <Pressable
+      onPress={disabled ? undefined : onPress}
+      disabled={disabled || !onPress}
+      style={[styles.menuRow, disabled && styles.menuRowDisabled]}
+    >
       <Text style={[styles.menuLabel, destructive && styles.menuLabelDestructive]}>{label}</Text>
       {disabled && <Text style={styles.soon}>Próximamente</Text>}
-    </View>
+    </Pressable>
   );
 }
 

@@ -112,6 +112,30 @@ export async function saveProfileDetails(userId: string, input: CreateProfileInp
   if (error) throw error;
 }
 
+export interface UpdateProfileInput {
+  profession: string;
+  description?: string;
+  portfolioUrl?: string;
+  photoUrl: string;
+}
+
+/**
+ * Edición post-onboarding del perfil. A diferencia de `saveProfileDetails`
+ * (usada en Create Profile), esta NO toca `name` ni `age`: por regla del
+ * PDR, nombre y edad son inmutables una vez completado el onboarding.
+ */
+export async function updateProfileDetails(userId: string, input: UpdateProfileInput) {
+  const { error } = await (supabase.from("profiles") as unknown as UpdateChain)
+    .update({
+      profession: input.profession,
+      description: input.description || null,
+      portfolio_url: input.portfolioUrl || null,
+      photo_url: input.photoUrl,
+    })
+    .eq("id", userId);
+  if (error) throw error;
+}
+
 export async function replaceMySkills(userId: string, skillIds: string[]) {
   const { error: deleteError } = await supabase
     .from("profile_skills")
