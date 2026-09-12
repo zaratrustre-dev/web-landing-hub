@@ -245,6 +245,34 @@ Verificado en los 3 commits: cero archivos `.env`/`.env.production`/
   Escríbenos (mailto: vía `Linking.openURL`), Reportar un perfil o
   conversación, Problemas de acceso, Cuenta y datos. Sin backend ni
   formulario — es solo info + enlace de correo, como se pidió.
+- **Ajustes → Compartir cuenta**: implica exponer datos por primera vez
+  fuera de la app, así que se tocó Supabase directamente:
+  - Nueva función SQL `public.get_public_profile(p_id uuid)`
+    (`SECURITY DEFINER`, migración `public_profile_share` aplicada vía MCP
+    de Supabase) que devuelve **solo** `id, name, photo_url, profession,
+    skills` — nunca la fila completa de `profiles`. Sin edad, descripción,
+    portfolio, país, role/role_sought ni nada de moderación. No devuelve
+    nada si el perfil está bloqueado o no ha terminado el onboarding.
+    `grant execute ... to anon, authenticated` — es la única vía pública
+    de lectura de perfiles, no se tocó RLS de la tabla en sí.
+  - Web: `src/lib/public-profile.ts` (`fetchPublicProfile`) + nueva ruta
+    pública `src/routes/p.$userId.tsx` (`/p/:userId`, sin login) — foto,
+    nombre, profesión, skills, y botón "Descubre Connect-it" que lleva a
+    `/`. Si el perfil no existe/no es público, muestra un mensaje en vez
+    de un 404 feo.
+    **Pendiente manual**: `src/routeTree.gen.ts` es generado por
+    TanStack Router y no se debe editar a mano — hace falta correr
+    `npm run dev` o `npm run build` una vez (o que Lovable.dev lo
+    regenere en su próximo build) para que la ruta `/p/$userId` quede
+    registrada.
+  - Mobile: nueva pantalla `app/share-profile.tsx` — vista previa de lo
+    que verán los demás (foto, nombre, profesión, skills), QR code del
+    enlace (`react-native-qrcode-svg`, nueva dependencia — ya se apoya en
+    `react-native-svg` que estaba instalado) y botón "Compartir" con el
+    share sheet nativo (`Share` de React Native). URL pública construida
+    con `constants/urls.ts` (`https://connect-it.app/p/<userId>` —
+    dominio provisional, mismo que `support@connect-it.app`, pendiente de
+    confirmar el definitivo).
 - Implementado: botón principal de Terms, Role, Role Sought y Create
   Profile ahora al 80% de ancho (`alignSelf: "center"`), igual que el
   criterio ya usado en `DevSignOutLink`. `DevSignOutLink.tsx` queda sin uso

@@ -46,7 +46,7 @@ export default function SettingsScreen() {
         <MenuRow label="Editar perfil" onPress={() => router.push("/edit-profile")} />
         <MenuRow label="Términos y Condiciones" onPress={() => router.push("/view-terms")} />
         <MenuRow label="Soporte" onPress={() => router.push("/support")} />
-        <MenuRow label="Compartir cuenta" disabled />
+        <MenuRow label="Compartir cuenta" onPress={() => router.push("/share-profile")} />
         <MenuRow label="Eliminar cuenta" disabled destructive />
       </View>
 
