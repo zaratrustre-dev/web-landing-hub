@@ -3,7 +3,6 @@ import { router } from "expo-router";
 import { StyleSheet, Text } from "react-native";
 
 import { Button } from "@/components/Button";
-import { DevSignOutLink } from "@/components/DevSignOutLink";
 import { RoleGrid } from "@/components/RoleGrid";
 import { Screen } from "@/components/Screen";
 import { StepHeader } from "@/components/StepHeader";
@@ -28,7 +27,7 @@ export default function RoleScreen() {
       await refreshProfile();
       router.replace("/");
     } catch (err) {
-      setError(getErrorMessage(err, "No se pudo guardar."));
+      setError(getErrorMessage(err, "Couldn't save."));
     } finally {
       setSaving(false);
     }
@@ -39,20 +38,19 @@ export default function RoleScreen() {
       <StepHeader
         step={2}
         totalSteps={5}
-        title="¿Cuál es tu rol?"
-        subtitle="Elige la categoría que mejor te representa."
+        title="What's your role?"
+        subtitle="Choose the category that best represents you."
         onBack={() => router.replace("/(onboarding)/terms")}
       />
       <RoleGrid selected={selected} onSelect={setSelected} />
       {error ? <Text style={styles.error}>{error}</Text> : null}
       <Button
-        title="Continuar"
+        title="Continue"
         loading={saving}
         disabled={!selected}
         onPress={handleContinue}
         style={styles.button}
       />
-      <DevSignOutLink />
     </Screen>
   );
 }

@@ -4,7 +4,6 @@ import * as ImagePicker from "expo-image-picker";
 import { Image, Pressable, StyleSheet, Text } from "react-native";
 
 import { Button } from "@/components/Button";
-import { DevSignOutLink } from "@/components/DevSignOutLink";
 import { Screen } from "@/components/Screen";
 import { SkillPicker } from "@/components/SkillPicker";
 import { StepHeader } from "@/components/StepHeader";
@@ -159,7 +158,6 @@ export default function CreateProfileScreen() {
         onPress={handleContinue}
         style={styles.button}
       />
-      <DevSignOutLink />
     </Screen>
   );
 }

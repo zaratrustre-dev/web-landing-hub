@@ -1,7 +1,7 @@
 # Arquitectura - Connect-it
 
 > Generado a partir de una exploración real del código el 09/09/2026, actualizado
-> el 11/09/2026. Mantener actualizado tras cambios estructurales - un
+> el 12/09/2026. Mantener actualizado tras cambios estructurales - un
 > ARCHITECTURE.md desactualizado es peor que no tenerlo, porque lleva a asumir
 > cosas que ya no son ciertas.
 
@@ -109,12 +109,15 @@ izquierda del texto, usado para el logo de Apple vía `@expo/vector-icons`
 el logo multicolor oficial de Google, sino un círculo negro simple con una
 "G" blanca en mono, tal como pide el diseño real) y `textStyle`.
 
-**Componente `DevSignOutLink` (mobile):** reescrito para reutilizar el
-componente `Button` (mismo alto/estilo que "Continuar"), con fondo `#FFA077`
-y texto oscuro `#0D0E0F` (convención del diseño para botones secundarios,
-vista también en el botón "BACK" de Role Sought). Acepta un `label` opcional
-para variar el texto por pantalla sin duplicar el componente (ej. inglés en
-Terms, español en el resto).
+**Componente `DevSignOutLink` (mobile):** reutiliza el componente `Button`
+(mismo alto/estilo que "Continuar"), con fondo `#FFA077` y texto oscuro
+`#0D0E0F` (convención del diseño para botones secundarios). Acepta un
+`label` opcional para variar el texto sin duplicar el componente. **Desde
+el 12/09/2026 se eliminó de las 5 pantallas de onboarding** (`terms.tsx`,
+`terms_en.tsx`, `role.tsx`, `role-sought.tsx`, `create-profile.tsx`) —
+el componente en sí sigue existiendo para usarse solo en Ajustes/Settings.
+Pendiente: al cerrar sesión desde Ajustes debe redirigir siempre a
+`/(auth)/welcome` (aún no implementado en código).
 
 **Componente `Checkbox` (mobile):** nuevo, en `components/Checkbox.tsx`.
 Casilla + label + descripción opcional, usa `Ionicons` para el check. Usado
@@ -134,9 +137,12 @@ Flujo completo funcional en Web (`http://localhost:8081`): Welcome → Terms
 → Role → Role Sought → Create Profile → Home tabs. Verificado de extremo a
 extremo con una cuenta de Google real.
 
-**Terms (`app/(onboarding)/terms.tsx`):** texto íntegro en **inglés**
-(única pantalla con este requisito explícito; el resto del onboarding sigue
-en español). Incluye dos checkboxes opcionales, desmarcados por defecto,
+**Idioma del onboarding:** `terms.tsx`/`terms_en.tsx`, `role.tsx` y
+`role-sought.tsx` están en **inglés**. `create-profile.tsx` sigue en
+español (pendiente de decisión sobre si se traduce también).
+
+**Terms (`app/(onboarding)/terms.tsx`):** texto íntegro en inglés. Incluye
+dos checkboxes opcionales, desmarcados por defecto,
 independientes entre sí y de la aceptación de términos:
 - **Marketing communications** → guarda `profiles.marketing_consent`
   (boolean). `profiles.marketing_consent_at` se rellena solo por un
@@ -146,6 +152,10 @@ independientes entre sí y de la aceptación de términos:
 
 `lib/profile.ts` → `acceptTerms(userId, { marketingConsent, radarEnabled })`
 guarda ambos junto con `terms_accepted_at`.
+
+**Cambio de prioridad (12/09/2026):** se pausa el trabajo en las pantallas
+de registro/onboarding (Role, Role Sought, Create Profile) para enfocar el
+desarrollo en la pantalla **Home**.
 
 **Pendiente de Fase 1:**
 - Aplicar el mismo tratamiento de extracción real de Figma (colores,
@@ -158,6 +168,10 @@ guarda ambos junto con `terms_accepted_at`.
   registrar el SHA-1 del certificado de firma (el del keystore que genere
   EAS, o el de desarrollo) en Google Cloud Console — pendiente hasta llegar
   a esa fase.
+- Logout desde Ajustes/Settings debe redirigir siempre a `/(auth)/welcome`
+  (decisión tomada, aún no implementada en código).
+- Reducir un 20% el ancho de los botones largos (full-width) del flujo de
+  registro (decisión tomada, aún no implementada en código).
 
 ## Historial de sincronización repo↔Supabase (11/09/2026)
 
@@ -176,3 +190,24 @@ local). Se subió en 3 commits:
 
 Verificado en los 3 commits: cero archivos `.env`/`.env.production`/
 `.env.local` filtrados.
+
+## Sesión 12/09/2026
+
+- Se eliminó `<DevSignOutLink />` (import y uso) de las 5 pantallas de
+  onboarding (`terms.tsx`, `terms_en.tsx`, `role.tsx`, `role-sought.tsx`,
+  `create-profile.tsx`). El componente sigue existiendo, solo para uso en
+  Ajustes/Settings.
+- Se tradujeron `role.tsx` y `role-sought.tsx` a inglés (título, subtítulo,
+  botón "Continuar"→"Continue", mensaje de error). Los labels de
+  `ROLE_LABELS` (`constants/roles.ts`) ya estaban en inglés.
+- Decisiones pendientes de implementar (ver "Pendiente de Fase 1"): logout
+  desde Ajustes → redirige a Welcome; botones largos del registro 20% más
+  cortos.
+- Cambio de prioridad: se pausan las pantallas de registro/onboarding para
+  enfocar el desarrollo en Home.
+- Se revisó la lógica de `app/index.tsx` por un reporte de que la pantalla
+  de Terms reaparecía en cada entrada: el gate `!profile?.terms_accepted_at`
+  y la persistencia en `acceptTerms()` (sin bloqueo de RLS) son correctos
+  tal como están en `main` — no se encontró bug en el código estático.
+  Pendiente de confirmar si el síntoma persiste con la misma cuenta (no una
+  recreada) antes de investigar más.

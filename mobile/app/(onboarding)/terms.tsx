@@ -4,7 +4,6 @@ import { StyleSheet, Text } from "react-native";
 
 import { Button } from "@/components/Button";
 import { Checkbox } from "@/components/Checkbox";
-import { DevSignOutLink } from "@/components/DevSignOutLink";
 import { Screen } from "@/components/Screen";
 import { colors, fontSize, spacing } from "@/constants/theme";
 import { acceptTerms } from "@/lib/profile";
@@ -61,7 +60,6 @@ export default function TermsScreen() {
 
       {error ? <Text style={styles.error}>{error}</Text> : null}
       <Button title="Accept and continue" loading={accepting} onPress={handleAccept} />
-      <DevSignOutLink label="Sign out (test)" />
     </Screen>
   );
 }
