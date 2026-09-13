@@ -1,7 +1,7 @@
 # Arquitectura - Connect-it
 
 > Generado a partir de una exploración real del código el 09/09/2026, actualizado
-> el 12/09/2026. Mantener actualizado tras cambios estructurales - un
+> el 13/09/2026. Mantener actualizado tras cambios estructurales - un
 > ARCHITECTURE.md desactualizado es peor que no tenerlo, porque lleva a asumir
 > cosas que ya no son ciertas.
 
