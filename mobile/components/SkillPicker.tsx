@@ -20,6 +20,14 @@ export function SkillPicker({ catalog, selectedIds, onChange }: SkillPickerProps
     ? catalog.filter((s) => s.name.toLowerCase().includes(query.trim().toLowerCase()))
     : catalog;
 
+  // Las skills ya seleccionadas deben ir siempre primero, para que nunca
+  // queden fuera del recorte de abajo (y así siempre se vean marcadas).
+  const ordered = [...filtered].sort((a, b) => {
+    const aSel = selectedIds.includes(a.id) ? 0 : 1;
+    const bSel = selectedIds.includes(b.id) ? 0 : 1;
+    return aSel - bSel;
+  });
+
   function toggle(id: string) {
     if (selectedIds.includes(id)) {
       onChange(selectedIds.filter((s) => s !== id));
@@ -42,7 +50,7 @@ export function SkillPicker({ catalog, selectedIds, onChange }: SkillPickerProps
         {selectedIds.length}/{MAX_SKILLS} seleccionadas
       </Text>
       <View style={styles.chipsWrap}>
-        {filtered.slice(0, 30).map((skill) => {
+        {ordered.slice(0, 30).map((skill) => {
           const isSelected = selectedIds.includes(skill.id);
           const isDisabled = !isSelected && selectedIds.length >= MAX_SKILLS;
           return (
