@@ -9,6 +9,8 @@ interface ProfileCardProps {
   candidate: CandidateProfile;
   onLike: () => void;
   onDislike: () => void;
+  /** Abre la vista de perfil completo. Si se omite, la card no es pulsable. */
+  onOpenProfile?: () => void;
   /** Deshabilita ambos botones mientras se guarda el swipe anterior. */
   disabled?: boolean;
 }
@@ -22,7 +24,7 @@ function truncate(text: string, max: number): string {
   return text.length > max ? `${text.slice(0, max - 1).trimEnd()}…` : text;
 }
 
-export function ProfileCard({ candidate, onLike, onDislike, disabled }: ProfileCardProps) {
+export function ProfileCard({ candidate, onLike, onDislike, onOpenProfile, disabled }: ProfileCardProps) {
   const nameAge = [candidate.name, candidate.age ? String(candidate.age) : null]
     .filter(Boolean)
     .join(", ");
@@ -31,7 +33,12 @@ export function ProfileCard({ candidate, onLike, onDislike, disabled }: ProfileC
   const skills = candidate.skills.slice(0, 3);
 
   return (
-    <View style={styles.card}>
+    <Pressable
+      style={styles.card}
+      onPress={onOpenProfile}
+      disabled={!onOpenProfile}
+      accessibilityRole={onOpenProfile ? "button" : undefined}
+    >
       {candidate.photoUrl ? (
         <Image source={{ uri: candidate.photoUrl }} style={StyleSheet.absoluteFill} resizeMode="cover" />
       ) : (
@@ -97,7 +104,7 @@ export function ProfileCard({ candidate, onLike, onDislike, disabled }: ProfileC
           </Pressable>
         </View>
       </View>
-    </View>
+    </Pressable>
   );
 }
 

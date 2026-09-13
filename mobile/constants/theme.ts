@@ -14,6 +14,7 @@
   // tomado del export de Figma.
   cardBackground: "#1B1C1C",
   cardButtonBackground: "#292A2A",
+  photoBackground: "#343535",
   destructive: "#EF4444",
   success: "#22C55E",
   googleButtonBg: "#FFFFFF",

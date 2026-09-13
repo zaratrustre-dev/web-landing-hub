@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
+import { router, useFocusEffect } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
 
@@ -31,11 +32,16 @@ export default function HomeScreen() {
     }
   }, []);
 
-  useEffect(() => {
-    if (!userId) return;
-    setLoading(true);
-    loadCandidate(userId).finally(() => setLoading(false));
-  }, [userId, loadCandidate]);
+  // useFocusEffect cubre tanto la carga inicial como el refresh al volver
+  // de la vista de perfil completo (donde el usuario puede haber likeado/
+  // dislikeado, dejando el candidato en memoria obsoleto).
+  useFocusEffect(
+    useCallback(() => {
+      if (!userId) return;
+      setLoading(true);
+      loadCandidate(userId).finally(() => setLoading(false));
+    }, [userId, loadCandidate]),
+  );
 
   const handleSwipe = useCallback(
     async (isLike: boolean) => {
@@ -67,12 +73,13 @@ export default function HomeScreen() {
             candidate={candidate}
             onLike={() => handleSwipe(true)}
             onDislike={() => handleSwipe(false)}
+            onOpenProfile={() => router.push(`/profile/${candidate.id}`)}
             disabled={swiping}
           />
         ) : (
           <View style={styles.emptyState}>
             <Ionicons name="people-outline" size={48} color={colors.textFaint} />
-            <Text style={styles.emptyTitle}>You're all caught up</Text>
+            <Text style={styles.emptyTitle}>You&apos;re all caught up</Text>
             <Text style={styles.emptyBody}>
               No new professionals to show right now. Check back later.
             </Text>

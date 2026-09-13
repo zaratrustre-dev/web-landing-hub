@@ -6,6 +6,8 @@ export interface CandidateProfile {
   age: number | null;
   photoUrl: string | null;
   profession: string | null;
+  description: string | null;
+  portfolioUrl: string | null;
   skills: string[];
 }
 
@@ -18,8 +20,28 @@ type CandidateRow = {
   age: number | null;
   photo_url: string | null;
   profession: string | null;
+  description: string | null;
+  portfolio_url: string | null;
   profile_skills: { skills: { name: string } | null }[] | null;
 };
+
+const CANDIDATE_SELECT =
+  "id, name, age, photo_url, profession, description, portfolio_url, profile_skills(skills(name))";
+
+function mapCandidateRow(row: CandidateRow): CandidateProfile {
+  return {
+    id: row.id,
+    name: row.name,
+    age: row.age,
+    photoUrl: row.photo_url,
+    profession: row.profession,
+    description: row.description,
+    portfolioUrl: row.portfolio_url,
+    skills: (row.profile_skills ?? [])
+      .map((ps) => ps.skills?.name)
+      .filter((n): n is string => Boolean(n)),
+  };
+}
 
 const CANDIDATE_POOL_SIZE = 20;
 
@@ -47,7 +69,7 @@ export async function fetchNextCandidate(userId: string): Promise<CandidateProfi
 
   const { data, error } = await supabase
     .from("profiles")
-    .select("id, name, age, photo_url, profession, profile_skills(skills(name))")
+    .select(CANDIDATE_SELECT)
     .eq("onboarding_completed", true)
     .not("id", "in", `(${excludedIds.join(",")})`)
     .limit(CANDIDATE_POOL_SIZE);
@@ -56,17 +78,19 @@ export async function fetchNextCandidate(userId: string): Promise<CandidateProfi
   const rows = (data ?? []) as unknown as CandidateRow[];
   if (rows.length === 0) return null;
 
-  const chosen = rows[Math.floor(Math.random() * rows.length)];
-  return {
-    id: chosen.id,
-    name: chosen.name,
-    age: chosen.age,
-    photoUrl: chosen.photo_url,
-    profession: chosen.profession,
-    skills: (chosen.profile_skills ?? [])
-      .map((ps) => ps.skills?.name)
-      .filter((n): n is string => Boolean(n)),
-  };
+  return mapCandidateRow(rows[Math.floor(Math.random() * rows.length)]);
+}
+
+/** Trae el perfil completo de un candidato por id, para la vista de perfil completo. */
+export async function fetchProfileById(id: string): Promise<CandidateProfile | null> {
+  const { data, error } = await supabase
+    .from("profiles")
+    .select(CANDIDATE_SELECT)
+    .eq("id", id)
+    .maybeSingle();
+  if (error) throw error;
+  if (!data) return null;
+  return mapCandidateRow(data as unknown as CandidateRow);
 }
 
 type SwipeInsertChain = {
