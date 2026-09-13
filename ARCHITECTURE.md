@@ -383,3 +383,25 @@ Verificado en los 3 commits: cero archivos `.env`/`.env.production`/
   venga. Traducir esto implica decidir si se traduce también el panel
   admin (cambio de datos, no solo de UI) — no se ha tocado hasta que Jose
   lo confirme explícitamente.
+
+## Sesión 13/09/2026 (cont.) — países a inglés
+
+- Jose confirmó traducir `constants/countries.ts` (mobile) y
+  `src/lib/countries.ts` (admin) a inglés. Mapeados los 194 países
+  español→inglés (`ISO_TO_SPANISH_COUNTRY` renombrado a
+  `ISO_TO_COUNTRY_NAME` en mobile — no tenía otros consumidores fuera de
+  `getDeviceCountryName()`, verificado con grep antes de renombrar).
+  `src/lib/countries.ts` regenerado con los mismos 194 nombres en inglés,
+  orden alfabético inglés.
+- **Migración de datos**: antes de tocar el código se comprobó cuántos
+  perfiles reales tenían país en español (4 en total: 2× "España", 1×
+  "Reino Unido", más uno nuevo "Francia" que apareció entre medias — se
+  ve que alguien estaba probando el registro). Los 4 se migraron con
+  `UPDATE` directo a Supabase (España→Spain, Reino Unido→United Kingdom,
+  Francia→France) para que sigan siendo editables desde el `<select>` del
+  panel admin, cuyo `value` tiene que coincidir exactamente con el string
+  guardado en `profiles.country`.
+- Los placeholders del `<select>` del panel admin ("País…") se dejaron
+  sin traducir a propósito — el panel admin es una herramienta interna
+  para Jose, no se pidió traducirlo completo, solo que los VALORES de
+  país coincidieran con mobile.
