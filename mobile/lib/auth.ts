@@ -64,7 +64,7 @@ export function useGoogleSignIn() {
       setError(null);
       try {
         if (!idToken) {
-          throw new Error("Google no devolvió un id_token válido.");
+          throw new Error("Google didn't return a valid id_token.");
         }
         const { error: signInError } = await supabase.auth.signInWithIdToken({
           provider: "google",
@@ -74,7 +74,7 @@ export function useGoogleSignIn() {
         if (signInError) throw new Error(signInError.message);
       } catch (err) {
         if (!cancelled) {
-          setError(getErrorMessage(err, "Error al iniciar sesión."));
+          setError(getErrorMessage(err, "Error signing in."));
         }
       } finally {
         if (!cancelled) setSigningIn(false);

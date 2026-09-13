@@ -41,7 +41,7 @@ export default function EditProfileScreen() {
   async function pickPhoto() {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permission.granted) {
-      setError("Necesitamos acceso a tus fotos para elegir una foto de perfil.");
+      setError("We need access to your photos to choose a profile picture.");
       return;
     }
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -80,7 +80,7 @@ export default function EditProfileScreen() {
       await refreshProfile();
       setSaved(true);
     } catch (err) {
-      setError(getErrorMessage(err, "No se pudo guardar tu perfil."));
+      setError(getErrorMessage(err, "Couldn't save your profile."));
     } finally {
       setSaving(false);
     }
@@ -92,49 +92,49 @@ export default function EditProfileScreen() {
         <Pressable onPress={() => router.back()} style={styles.backButton} hitSlop={8}>
           <Ionicons name="chevron-back" size={24} color={colors.text} />
         </Pressable>
-        <Text style={styles.title}>Editar perfil</Text>
+        <Text style={styles.title}>Edit profile</Text>
       </View>
 
       <Pressable onPress={pickPhoto} style={styles.photoPicker}>
         {photoUri ? (
           <Image source={{ uri: photoUri }} style={styles.photo} />
         ) : (
-          <Text style={styles.photoPlaceholder}>Añadir foto</Text>
+          <Text style={styles.photoPlaceholder}>Add photo</Text>
         )}
       </Pressable>
 
       <View style={styles.readOnlyRow}>
         <View style={styles.readOnlyField}>
-          <Text style={styles.readOnlyLabel}>Nombre</Text>
+          <Text style={styles.readOnlyLabel}>Name</Text>
           <Text style={styles.readOnlyValue}>{profile?.name}</Text>
         </View>
         <View style={styles.readOnlyField}>
-          <Text style={styles.readOnlyLabel}>Edad</Text>
+          <Text style={styles.readOnlyLabel}>Age</Text>
           <Text style={styles.readOnlyValue}>{profile?.age}</Text>
         </View>
       </View>
       <Text style={styles.readOnlyNote}>
-        Nombre y edad no se pueden cambiar después del registro.
+        Name and age can&apos;t be changed after registration.
       </Text>
 
       <TextField
-        label="Profesión"
+        label="Profession"
         value={profession}
         onChangeText={(t) => setProfession(t.slice(0, MAX_PROFESSION))}
-        placeholder="Ej. Product Designer"
+        placeholder="e.g. Product Designer"
         counter={`${profession.length}/${MAX_PROFESSION}`}
       />
       <TextField
-        label="Descripción (opcional)"
+        label="Description (optional)"
         value={description}
         onChangeText={(t) => setDescription(t.slice(0, MAX_DESCRIPTION))}
-        placeholder="Cuenta brevemente a qué te dedicas"
+        placeholder="Briefly describe what you do"
         counter={`${description.length}/${MAX_DESCRIPTION}`}
         multiline
         numberOfLines={3}
       />
       <TextField
-        label="Portfolio / CV / LinkedIn (opcional)"
+        label="Portfolio / CV / LinkedIn (optional)"
         value={portfolioUrl}
         onChangeText={setPortfolioUrl}
         placeholder="https://…"
@@ -149,9 +149,9 @@ export default function EditProfileScreen() {
       />
 
       {error ? <Text style={styles.error}>{error}</Text> : null}
-      {saved ? <Text style={styles.saved}>Cambios guardados.</Text> : null}
+      {saved ? <Text style={styles.saved}>Changes saved.</Text> : null}
       <Button
-        title="Guardar cambios"
+        title="Save changes"
         loading={saving}
         disabled={!canSave}
         onPress={handleSave}

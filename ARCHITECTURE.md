@@ -339,3 +339,47 @@ Verificado en los 3 commits: cero archivos `.env`/`.env.production`/
     (`web-landing-hub-push`, sin caducidad) solo tenía `repo`. Pendiente
     de que Jose borre el token viejo desde
     github.com/settings/tokens.
+
+## Sesión 13/09/2026 — bugs reportados probando la web + inglés por defecto
+
+- **Bug real: Terms reaparecía tras login con Google.** No era el gate de
+  `app/index.tsx` (ese ya estaba bien) sino una condición de carrera en
+  `providers/AuthProvider.tsx`: el listener `onAuthStateChange` no ponía
+  `loading=true` mientras cargaba el perfil tras un login recién hecho, así
+  que por una fracción de segundo `session` ya existía pero `profile`
+  seguía `null`, y el gate de `index.tsx` interpretaba eso como "términos
+  no aceptados" y navegaba a Terms — navegación que se quedaba hecha
+  aunque el perfil llegara un instante después. Arreglado poniendo
+  `loading=true`/`false` alrededor del `loadProfile` dentro del listener,
+  igual que ya hacía el `getSession()` inicial.
+- **404 en GitHub Pages al entrar por link directo** (ej. `/welcome`
+  directamente, o recargar en esa ruta): problema clásico de SPA en
+  GitHub Pages — sirve archivos tal cual, no existe el archivo físico
+  `/welcome`. Añadido paso al workflow que copia `dist/index.html` a
+  `dist/404.html` tras el export (truco estándar).
+- Botones de "Continue with Google" y "Continue with Apple" en Welcome:
+  aplicado el mismo `width: "80%", alignSelf: "center"` que ya tenían
+  Role/Role Sought/Create Profile/Terms (antes no se habían tocado, de
+  ahí el reporte de que seguían "muy grandes").
+- **Edad → fecha de nacimiento**: `create-profile.tsx` reescrito con 3
+  campos (Día/Mes/Año) en vez de un número de edad libre. Nueva función
+  `computeAge()` valida que sea una fecha real (rechaza rollovers tipo 30
+  de febrero) y no sea futura, calcula la edad correctamente considerando
+  si ya pasó el cumpleaños este año. Se sigue guardando `age` (entero) en
+  `profiles` — no se tocó el esquema ni se añadió columna de fecha de
+  nacimiento.
+- **Inglés por defecto en todas las pantallas**: traducidas
+  `create-profile.tsx`, `edit-profile.tsx`, `settings.tsx`,
+  `delete-account.tsx` (incluida la palabra de confirmación,
+  `ELIMINAR` → `DELETE`), `share-profile.tsx`, `support.tsx`,
+  `store.tsx`, `chat.tsx`, `(tabs)/index.tsx` (Home), `SkillPicker.tsx`,
+  `DevSignOutLink.tsx`, `lib/errors.ts` (mensaje de error genérico) y
+  `lib/auth.ts` (2 mensajes de error de Google Sign-In).
+  **Pendiente de decisión, sin tocar a propósito**:
+  `constants/countries.ts` guarda el país del perfil en español
+  (`ISO_TO_SPANISH_COUNTRY`) y el propio comentario del archivo dice que
+  debe coincidir EXACTAMENTE con `src/lib/countries.ts` del panel admin
+  para que `profiles.country` tenga el mismo formato viniendo de donde
+  venga. Traducir esto implica decidir si se traduce también el panel
+  admin (cambio de datos, no solo de UI) — no se ha tocado hasta que Jose
+  lo confirme explícitamente.

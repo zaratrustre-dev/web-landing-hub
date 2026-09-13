@@ -32,7 +32,7 @@ export function SkillPicker({ catalog, selectedIds, onChange }: SkillPickerProps
   return (
     <View>
       <TextInput
-        placeholder="Buscar skills…"
+        placeholder="Search skills…"
         placeholderTextColor={colors.textFaint}
         value={query}
         onChangeText={setQuery}

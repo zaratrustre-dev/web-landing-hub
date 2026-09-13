@@ -10,9 +10,10 @@ export default function ChatScreen() {
     <Screen>
       <View style={styles.emptyState}>
         <Ionicons name="chatbubbles-outline" size={48} color={colors.textFaint} />
-        <Text style={styles.title}>Chat llega pronto</Text>
+        <Text style={styles.title}>Chat is coming soon</Text>
         <Text style={styles.body}>
-          Aquí verás tus conversaciones con tus Matches y el chat global de la comunidad.
+          Here you&apos;ll see your conversations with your Matches and the community&apos;s
+          global chat.
         </Text>
       </View>
     </Screen>

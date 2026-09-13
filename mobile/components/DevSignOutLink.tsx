@@ -9,7 +9,7 @@ interface DevSignOutLinkProps {
   label?: string;
 }
 
-export function DevSignOutLink({ label = "Cerrar sesión (test)" }: DevSignOutLinkProps) {
+export function DevSignOutLink({ label = "Sign out (test)" }: DevSignOutLinkProps) {
   const [signingOut, setSigningOut] = useState(false);
 
   async function handlePress() {

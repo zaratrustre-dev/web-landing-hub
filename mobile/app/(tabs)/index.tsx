@@ -14,14 +14,14 @@ export default function HomeScreen() {
   return (
     <Screen>
       <View style={styles.header}>
-        <Text style={styles.greeting}>Hola, {profile?.name?.split(" ")[0] ?? ""} 👋</Text>
+        <Text style={styles.greeting}>Hi, {profile?.name?.split(" ")[0] ?? ""} 👋</Text>
       </View>
       <View style={styles.emptyState}>
         <Ionicons name="people-outline" size={48} color={colors.textFaint} />
-        <Text style={styles.emptyTitle}>Discovery llega pronto</Text>
+        <Text style={styles.emptyTitle}>Discovery is coming soon</Text>
         <Text style={styles.emptyBody}>
-          Tu perfil ya está listo. La búsqueda de profesionales (Discovery) se activará en la
-          próxima fase.
+          Your profile is all set. Discovering other professionals will be enabled in the
+          next phase.
         </Text>
       </View>
     </Screen>

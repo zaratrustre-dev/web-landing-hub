@@ -19,40 +19,40 @@ export default function SupportScreen() {
         <Pressable onPress={() => router.back()} style={styles.backButton} hitSlop={8}>
           <Ionicons name="chevron-back" size={24} color={colors.text} />
         </Pressable>
-        <Text style={styles.title}>Soporte</Text>
+        <Text style={styles.title}>Support</Text>
       </View>
 
       <Text style={styles.intro}>
-        Estamos para ayudarte con el acceso, tu perfil, los reportes y cualquier duda sobre
+        We&apos;re here to help with access, your profile, reports, or any other question about
         Connect-it.
       </Text>
 
-      <Section heading="Escríbenos">
-        <Text style={styles.paragraph}>Correo de soporte:</Text>
+      <Section heading="Contact us">
+        <Text style={styles.paragraph}>Support email:</Text>
         <Pressable onPress={() => Linking.openURL(`mailto:${SUPPORT_EMAIL}`)}>
           <Text style={styles.emailLink}>{SUPPORT_EMAIL}</Text>
         </Pressable>
-        <Text style={styles.paragraph}>Respondemos en horario laboral.</Text>
+        <Text style={styles.paragraph}>We reply during business hours.</Text>
       </Section>
 
-      <Section heading="Reportar un perfil o una conversación">
+      <Section heading="Report a profile or conversation">
         <Text style={styles.paragraph}>
-          Desde la aplicación puedes reportar un perfil o un chat, y deshacer un Match. Si
-          necesitas intervención urgente, indícanoslo en el asunto del correo.
+          You can report a profile or a chat, and undo a Match, from within the app. If you
+          need urgent intervention, let us know in the subject of your email.
         </Text>
       </Section>
 
-      <Section heading="Problemas de acceso">
+      <Section heading="Access issues">
         <Text style={styles.paragraph}>
-          El acceso funciona con Google. Si tu proveedor no responde, escríbenos indicando el
-          correo con el que te registraste.
+          Sign-in works with Google. If your provider isn&apos;t responding, email us with the
+          address you registered with.
         </Text>
       </Section>
 
-      <Section heading="Cuenta y datos">
+      <Section heading="Account and data">
         <Text style={styles.paragraph}>
-          Puedes editar tu perfil o cerrar sesión desde Ajustes. La eliminación de cuenta es
-          permanente y requiere confirmación.
+          You can edit your profile or log out from Settings. Account deletion is permanent
+          and requires confirmation.
         </Text>
       </Section>
     </Screen>

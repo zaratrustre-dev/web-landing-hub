@@ -43,18 +43,18 @@ export default function SettingsScreen() {
       </View>
 
       <View style={styles.menu}>
-        <MenuRow label="Editar perfil" onPress={() => router.push("/edit-profile")} />
-        <MenuRow label="Términos y Condiciones" onPress={() => router.push("/view-terms")} />
-        <MenuRow label="Soporte" onPress={() => router.push("/support")} />
-        <MenuRow label="Compartir cuenta" onPress={() => router.push("/share-profile")} />
+        <MenuRow label="Edit profile" onPress={() => router.push("/edit-profile")} />
+        <MenuRow label="Terms and Conditions" onPress={() => router.push("/view-terms")} />
+        <MenuRow label="Support" onPress={() => router.push("/support")} />
+        <MenuRow label="Share account" onPress={() => router.push("/share-profile")} />
         <MenuRow
-          label="Eliminar cuenta"
+          label="Delete account"
           destructive
           onPress={() => router.push("/delete-account")}
         />
       </View>
 
-      <Button title="Cerrar sesión" variant="outline" loading={signingOut} onPress={handleSignOut} />
+      <Button title="Log out" variant="outline" loading={signingOut} onPress={handleSignOut} />
     </Screen>
   );
 }
@@ -77,7 +77,7 @@ function MenuRow({
       style={[styles.menuRow, disabled && styles.menuRowDisabled]}
     >
       <Text style={[styles.menuLabel, destructive && styles.menuLabelDestructive]}>{label}</Text>
-      {disabled && <Text style={styles.soon}>Próximamente</Text>}
+      {disabled && <Text style={styles.soon}>Coming soon</Text>}
     </Pressable>
   );
 }

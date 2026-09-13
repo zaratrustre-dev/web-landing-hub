@@ -11,7 +11,7 @@ import { deleteMyAccount } from "@/lib/account";
 import { getErrorMessage } from "@/lib/errors";
 import { signOut } from "@/lib/auth";
 
-const CONFIRM_WORD = "ELIMINAR";
+const CONFIRM_WORD = "DELETE";
 
 /**
  * Ajustes → Eliminar cuenta. Borrado permanente e irreversible: exige
@@ -34,7 +34,7 @@ export default function DeleteAccountScreen() {
       await signOut();
       router.replace("/(auth)/welcome");
     } catch (err) {
-      setError(getErrorMessage(err, "No se pudo eliminar la cuenta. Inténtalo de nuevo."));
+      setError(getErrorMessage(err, "Couldn't delete your account. Please try again."));
       setDeleting(false);
     }
   }
@@ -45,22 +45,22 @@ export default function DeleteAccountScreen() {
         <Pressable onPress={() => router.back()} style={styles.backButton} hitSlop={8}>
           <Ionicons name="chevron-back" size={24} color={colors.text} />
         </Pressable>
-        <Text style={styles.title}>Eliminar cuenta</Text>
+        <Text style={styles.title}>Delete account</Text>
       </View>
 
       <View style={styles.warningBox}>
-        <Text style={styles.warningTitle}>Esta acción es permanente</Text>
+        <Text style={styles.warningTitle}>This action is permanent</Text>
         <Text style={styles.warningText}>
-          Se eliminará tu perfil, tus Matches, tus conversaciones y tus Likes. No podrás
-          recuperarlos ni volver a acceder con esta cuenta.
+          Your profile, Matches, conversations, and Likes will be deleted. You won&apos;t be
+          able to recover them or sign back in with this account.
         </Text>
       </View>
 
       <Text style={styles.label}>
-        Escribe <Text style={styles.labelWord}>{CONFIRM_WORD}</Text> para confirmar
+        Type <Text style={styles.labelWord}>{CONFIRM_WORD}</Text> to confirm
       </Text>
       <TextField
-        label="Confirmación"
+        label="Confirmation"
         value={confirmText}
         onChangeText={setConfirmText}
         placeholder={CONFIRM_WORD}
@@ -71,7 +71,7 @@ export default function DeleteAccountScreen() {
       {error ? <Text style={styles.error}>{error}</Text> : null}
 
       <Button
-        title="Eliminar cuenta definitivamente"
+        title="Permanently delete account"
         loading={deleting}
         disabled={!canDelete}
         onPress={handleDelete}

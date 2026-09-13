@@ -95,7 +95,7 @@ const styles = StyleSheet.create({
     marginTop: spacing.sm,
   },
   footer: { gap: spacing.md, paddingBottom: spacing.lg },
-  googleButton: { backgroundColor: colors.googleButtonBg },
+  googleButton: { backgroundColor: colors.googleButtonBg, width: "80%", alignSelf: "center" },
   googleButtonText: {
     color: colors.googleButtonText,
     fontFamily: fontFamily.mono,
@@ -106,6 +106,8 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
+    width: "80%",
+    alignSelf: "center",
   },
   appleButtonText: {
     color: colors.text,

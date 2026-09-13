@@ -39,6 +39,17 @@ jobs:
           EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID: ${{ secrets.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID }}
         run: npx expo export -p web
 
+      - name: SPA fallback for GitHub Pages
+        # GitHub Pages sirve archivos estáticos tal cual: si alguien entra
+        # directo a /web-landing-hub/welcome (o recarga esa URL), no existe
+        # ese archivo físico y da 404 en vez de dejar que expo-router
+        # resuelva la ruta en el cliente. Copiar index.html a 404.html es
+        # el truco estándar para SPAs en GitHub Pages: ante cualquier ruta
+        # desconocida, sirve el mismo shell de la app y el router de
+        # expo-router toma el control desde ahí.
+        working-directory: mobile
+        run: cp dist/index.html dist/404.html
+
       - name: Deploy to gh-pages
         uses: peaceiris/actions-gh-pages@v4
         with:

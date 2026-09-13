@@ -40,7 +40,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { data: subscription } = supabase.auth.onAuthStateChange(async (_event, newSession) => {
       setSession(newSession);
       if (newSession?.user.id) {
+        // Importante: loading=true mientras se carga el perfil tras un
+        // login recién hecho (ej. al volver del OAuth de Google). Sin
+        // esto, index.tsx ve session != null pero profile todavía null
+        // por una fracción de segundo, y como "!profile?.terms_accepted_at"
+        // es true en ese instante, redirige a Terms aunque el usuario ya
+        // los hubiera aceptado antes — y esa navegación se queda hecha
+        // aunque el perfil real llegue un instante después.
+        setLoading(true);
         await loadProfile(newSession.user.id);
+        setLoading(false);
       } else {
         setProfile(null);
       }

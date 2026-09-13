@@ -39,7 +39,7 @@ export default function ShareProfileScreen() {
   async function handleShare() {
     try {
       await Share.share({
-        message: `Mira mi perfil en Connect-it: ${publicUrl}`,
+        message: `Check out my profile on Connect-it: ${publicUrl}`,
         url: publicUrl,
       });
     } catch {
@@ -53,12 +53,12 @@ export default function ShareProfileScreen() {
         <Pressable onPress={() => router.back()} style={styles.backButton} hitSlop={8}>
           <Ionicons name="chevron-back" size={24} color={colors.text} />
         </Pressable>
-        <Text style={styles.title}>Compartir cuenta</Text>
+        <Text style={styles.title}>Share account</Text>
       </View>
 
       <Text style={styles.intro}>
-        Cualquiera con este enlace verá tu foto, nombre, profesión y skills — nada más. No
-        muestra tu edad, descripción ni portfolio.
+        Anyone with this link will see your photo, name, profession, and skills — nothing
+        else. It doesn&apos;t show your age, description, or portfolio.
       </Text>
 
       <View style={styles.card}>
@@ -85,7 +85,7 @@ export default function ShareProfileScreen() {
       </View>
       <Text style={styles.url}>{publicUrl}</Text>
 
-      <Button title="Compartir" onPress={handleShare} style={styles.button} />
+      <Button title="Share" onPress={handleShare} style={styles.button} />
     </Screen>
   );
 }

@@ -11,8 +11,8 @@ export default function StoreScreen() {
     <Screen>
       <View style={styles.emptyState}>
         <Ionicons name="storefront-outline" size={48} color={colors.textFaint} />
-        <Text style={styles.title}>Store todavía no está activa</Text>
-        <Text style={styles.body}>Los planes premium se activarán más adelante.</Text>
+        <Text style={styles.title}>Store isn&apos;t active yet</Text>
+        <Text style={styles.body}>Premium plans will be enabled later on.</Text>
       </View>
     </Screen>
   );
