@@ -26,6 +26,9 @@
     "web": {
       "favicon": "./assets/favicon.png"
     },
+    "experiments": {
+      "baseUrl": "/web-landing-hub"
+    },
     "plugins": [
       "expo-router",
       "expo-secure-store",

@@ -304,3 +304,38 @@ Verificado en los 3 commits: cero archivos `.env`/`.env.production`/
   criterio ya usado en `DevSignOutLink`. `DevSignOutLink.tsx` queda sin uso
   en ninguna pantalla por ahora (se mantiene el componente por si se
   requiere en Ajustes más adelante).
+- **Vista web de mobile en GitHub Pages** (para poder ver/probar sin
+  build local ni EAS): se intentó primero con Vercel, pero el conector
+  MCP no tenía permiso real sobre el proyecto ya creado y conectado a
+  GitHub (404/409/403 inconsistentes según la llamada — desajuste de
+  scope, no arreglable reintentando). Se optó por GitHub Pages, que no
+  depende de ningún conector externo:
+  - Nuevo `.github/workflows/mobile-web.yml`: en cada push a `main` que
+    toque `mobile/**`, hace `npm install` + `npx expo export -p web`
+    dentro de `mobile/` y publica `mobile/dist` en la rama `gh-pages` con
+    `peaceiris/actions-gh-pages@v4`.
+  - `mobile/app.json`: añadido `experiments.baseUrl: "/web-landing-hub"`
+    (necesario porque GitHub Pages de proyecto sirve desde
+    `usuario.github.io/repo-name/`, no desde la raíz — si no, todos los
+    assets y rutas de expo-router romperían). Solo afecta la resolución de
+    rutas del bundler web, no los builds nativos.
+  - **`mobile/package-lock.json` no existe** (está en `.gitignore` de raíz
+    a propósito), así que el workflow usa `npm install` en vez de
+    `npm ci`, y sin cache de dependencias por lockfile.
+  - **Pendiente manual de Jose**: activar Pages en Settings → Pages →
+    Source: "Deploy from a branch" → `gh-pages` / `root` (se crea sola la
+    rama en el primer run del workflow). Y añadir como Secrets del repo
+    (Settings → Secrets and variables → Actions): `EXPO_PUBLIC_SUPABASE_URL`,
+    `EXPO_PUBLIC_SUPABASE_ANON_KEY` (ambas ya las tengo, se las puedo dar)
+    y `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID` (esa no la tengo). **Sin estos
+    secrets el build compila igual pero la app da pantalla en blanco al
+    abrir**, porque `lib/supabase.ts` hace `throw` si faltan las de
+    Supabase.
+  - El proyecto `connect-it-mobile-web` en Vercel se quedó a medias
+    (creado y conectado a GitHub, pero inutilizable desde el conector) —
+    pendiente de decidir si se borra o se termina de configurar a mano.
+  - Token de GitHub usado para este push: uno nuevo (`repo` + `workflow`,
+    caducidad corta) generado específicamente porque el token anterior
+    (`web-landing-hub-push`, sin caducidad) solo tenía `repo`. Pendiente
+    de que Jose borre el token viejo desde
+    github.com/settings/tokens.
