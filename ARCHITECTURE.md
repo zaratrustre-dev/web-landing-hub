@@ -405,3 +405,23 @@ Verificado en los 3 commits: cero archivos `.env`/`.env.production`/
   sin traducir a propósito — el panel admin es una herramienta interna
   para Jose, no se pidió traducirlo completo, solo que los VALORES de
   país coincidieran con mobile.
+
+## Sesión 13/09/2026 (cont.) — bug en Ajustes → Editar perfil: skills del registro invisibles
+
+- **Bug reportado**: en Ajustes → Editar perfil, las skills elegidas
+  durante el registro no se veían — si una skill seleccionada no estaba
+  entre las primeras del catálogo, ni siquiera aparecía su chip (aunque
+  el contador arriba sí marcaba, ej. "2/3 seleccionadas").
+- **Causa**: `mobile/components/SkillPicker.tsx` renderiza el catálogo con
+  `filtered.slice(0, 30)` — un recorte fijo a 30 elementos sobre la lista
+  (sin buscar activamente, el orden es el que devuelve `catalog`, alfabético
+  por nombre). Si una skill ya seleccionada quedaba fuera de esas primeras
+  30, su `Pressable` nunca se montaba, así que no había forma de verla ni
+  de deseleccionarla desde Ajustes.
+- **Fix**: antes del `slice(0, 30)`, se ordena `filtered` poniendo primero
+  las skills cuyo `id` está en `selectedIds` (`ordered`). Así las
+  seleccionadas quedan siempre dentro del recorte visible,
+  independientemente de su posición alfabética original. No cambia el
+  límite de 3 (`MAX_SKILLS`), la búsqueda ni el resto de la lógica de
+  `toggle()`.
+- Commit `81001b2` en `main`.
