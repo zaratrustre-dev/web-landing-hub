@@ -8,7 +8,12 @@
   primaryForeground: "#0A0A0A",
   text: "#E3E2E2",
   textMuted: "#E2BFB3",
+  textSecondary: "#C8C6C5",
   textFaint: "#71717A",
+  // Fondo de la profile card (Discovery, PDR §04) — distinto de `surface`,
+  // tomado del export de Figma.
+  cardBackground: "#1B1C1C",
+  cardButtonBackground: "#292A2A",
   destructive: "#EF4444",
   success: "#22C55E",
   googleButtonBg: "#FFFFFF",
