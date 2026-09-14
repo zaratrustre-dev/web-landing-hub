@@ -15,6 +15,7 @@ import {
 } from "@/lib/admin";
 import { useIsAdmin, useSession } from "@/lib/auth";
 import { COUNTRIES } from "@/lib/countries";
+import { BulkImportUsersDialog } from "@/components/admin/BulkImportUsersDialog";
 
 const PAGE_SIZE = 20;
 
@@ -50,6 +51,7 @@ function AdminUsersPage() {
   const [togglingId, setTogglingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [showCreateForm, setShowCreateForm] = useState(false);
+  const [showImportDialog, setShowImportDialog] = useState(false);
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
   const [createForm, setCreateForm] = useState({
@@ -297,6 +299,13 @@ function AdminUsersPage() {
             <p className="text-sm text-muted-foreground">{totalCount} en total</p>
             <button
               type="button"
+              onClick={() => setShowImportDialog(true)}
+              className="rounded-md border border-input px-3 py-1.5 text-sm font-medium text-foreground transition-colors hover:bg-accent"
+            >
+              Importar Excel
+            </button>
+            <button
+              type="button"
               onClick={() => setShowCreateForm((v) => !v)}
               className="rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
             >
@@ -304,6 +313,12 @@ function AdminUsersPage() {
             </button>
           </div>
         </div>
+
+        <BulkImportUsersDialog
+          open={showImportDialog}
+          onOpenChange={setShowImportDialog}
+          onImported={loadPage}
+        />
 
         {showCreateForm && (
           <form

@@ -58,6 +58,23 @@ export async function fetchAdminProfiles(
   return (data ?? []) as AdminProfileRow[];
 }
 
+/**
+ * Todos los emails ya registrados (sin paginar), para comprobar duplicados
+ * ANTES de una importación masiva. Reutiliza admin_list_profiles con un
+ * page_limit grande - no hay tabla propia de "solo emails", y es la única
+ * vía ya expuesta al panel admin para leer auth.users.email vía RLS/RPC.
+ */
+export async function fetchAllAdminEmails(): Promise<string[]> {
+  const { data, error } = await (supabase.rpc as RpcFn)("admin_list_profiles", {
+    page_limit: 100000,
+    page_offset: 0,
+  });
+  if (error) throw error;
+  return ((data ?? []) as AdminProfileRow[])
+    .map((r) => r.email)
+    .filter((e): e is string => !!e);
+}
+
 export async function setUserBlocked(targetUserId: string, isBlocked: boolean, reason?: string) {
   const { error } = await (supabase.rpc as RpcFn)("admin_set_user_blocked", {
     target_user_id: targetUserId,
@@ -211,6 +228,7 @@ export interface UpdateProfileInput {
   country?: string | null;
   marketing_consent?: boolean;
   radar_enabled?: boolean;
+  onboarding_completed?: boolean;
 }
 
 /** Actualiza los campos de un perfil (usa la RLS admin_all ya existente). */
