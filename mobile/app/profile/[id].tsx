@@ -3,6 +3,7 @@ import { router, useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { ActivityIndicator, Alert, Image, Linking, Pressable, Share, StyleSheet, Text, View } from "react-native";
 
+import { AdModal } from "@/components/AdModal";
 import { ReportProfileModal } from "@/components/ReportProfileModal";
 import { Screen } from "@/components/Screen";
 import { colors, fontFamily, fontSize, radius, spacing } from "@/constants/theme";
@@ -10,8 +11,10 @@ import { getPublicProfileUrl } from "@/constants/urls";
 import {
   fetchLikeLimitStatus,
   fetchProfileById,
+  markCandidateStale,
   sendSwipe,
   type CandidateProfile,
+  type DueAd,
 } from "@/lib/discovery";
 import { reportProfile } from "@/lib/moderation";
 import { useAuth } from "@/providers/AuthProvider";
@@ -33,6 +36,7 @@ export default function ProfileDetailScreen() {
   const [error, setError] = useState<string | null>(null);
   const [reportModalVisible, setReportModalVisible] = useState(false);
   const [reporting, setReporting] = useState(false);
+  const [dueAd, setDueAd] = useState<DueAd | null>(null);
 
   useEffect(() => {
     if (!id) return;
@@ -54,8 +58,19 @@ export default function ProfileDetailScreen() {
       if (!myProfile?.id || !candidate || swiping || (isLike && likesExhausted)) return;
       setSwiping(true);
       try {
-        await sendSwipe(myProfile.id, candidate.id, isLike);
-        router.back();
+        const ad = await sendSwipe(myProfile.id, candidate.id, isLike);
+        // Avisa a Home (app/(tabs)/index.tsx) que el candidato que tenía
+        // mostrado quedó obsoleto de verdad — así solo pide uno nuevo
+        // cuando corresponde, en vez de en cada Atrás (ver bug fix
+        // 14/09/2026 en lib/discovery.ts).
+        markCandidateStale();
+        if (ad) {
+          // Si toca anuncio, se muestra aquí mismo antes de volver — al
+          // cerrarlo (onClose de AdModal) es cuando se hace router.back().
+          setDueAd(ad);
+        } else {
+          router.back();
+        }
       } catch {
         setError("Couldn't save that. Try again.");
         setSwiping(false);
@@ -217,6 +232,13 @@ export default function ProfileDetailScreen() {
         onClose={() => setReportModalVisible(false)}
         onSubmit={handleReportSubmit}
         submitting={reporting}
+      />
+      <AdModal
+        ad={dueAd}
+        onClose={() => {
+          setDueAd(null);
+          router.back();
+        }}
       />
     </>
   );

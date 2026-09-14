@@ -1,16 +1,19 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { router, useFocusEffect } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
 
+import { AdModal } from "@/components/AdModal";
 import { ProfileCard } from "@/components/ProfileCard";
 import { Screen } from "@/components/Screen";
 import { colors, fontSize, spacing } from "@/constants/theme";
 import {
+  consumeCandidateStale,
   fetchLikeLimitStatus,
   fetchNextCandidate,
   sendSwipe,
   type CandidateProfile,
+  type DueAd,
   type LikeLimitStatus,
 } from "@/lib/discovery";
 import { useAuth } from "@/providers/AuthProvider";
@@ -29,6 +32,17 @@ export default function HomeScreen() {
   const [loading, setLoading] = useState(true);
   const [swiping, setSwiping] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [dueAd, setDueAd] = useState<DueAd | null>(null);
+
+  // Ref (no state) a propósito: se lee dentro del callback de
+  // useFocusEffect sin que su identidad cambie en cada render — si
+  // `candidate` estuviera en las deps de ese useCallback, el efecto se
+  // volvería a disparar cada vez que cambia el candidato, no solo al
+  // ganar foco.
+  const candidateRef = useRef<CandidateProfile | null>(null);
+  useEffect(() => {
+    candidateRef.current = candidate;
+  }, [candidate]);
 
   const loadCandidate = useCallback(async (id: string) => {
     setError(null);
@@ -49,13 +63,23 @@ export default function HomeScreen() {
   }, []);
 
   // useFocusEffect cubre tanto la carga inicial como el refresh al volver
-  // de la vista de perfil completo (donde el usuario puede haber likeado/
-  // dislikeado, dejando el candidato o el contador de Likes obsoletos).
+  // de la vista de perfil completo. Bug fix (14/09/2026): antes esto pedía
+  // SIEMPRE un candidato nuevo al ganar foco, así que entrar al perfil y
+  // pulsar Atrás sin dar Like/Dislike igual mostraba una card distinta
+  // (fetchNextCandidate elige al azar). Ahora solo se pide un candidato
+  // nuevo si todavía no hay uno cargado (montaje inicial / se quedó sin
+  // candidatos) o si de verdad hubo un swipe en la vista de perfil
+  // completo (consumeCandidateStale() — ver lib/discovery.ts). El
+  // contador de Likes sí se refresca siempre, porque eso puede haber
+  // cambiado aunque el candidato no.
   useFocusEffect(
     useCallback(() => {
       if (!userId) return;
-      setLoading(true);
-      Promise.all([loadCandidate(userId), loadLikeStatus(userId)]).finally(() => setLoading(false));
+      const needsNewCandidate = !candidateRef.current || consumeCandidateStale();
+      setLoading(needsNewCandidate);
+      const tasks: Promise<unknown>[] = [loadLikeStatus(userId)];
+      if (needsNewCandidate) tasks.push(loadCandidate(userId));
+      Promise.all(tasks).finally(() => setLoading(false));
     }, [userId, loadCandidate, loadLikeStatus]),
   );
 
@@ -81,9 +105,10 @@ export default function HomeScreen() {
       if (!userId || !candidate || swiping) return;
       setSwiping(true);
       try {
-        await sendSwipe(userId, candidate.id, isLike);
+        const ad = await sendSwipe(userId, candidate.id, isLike);
         await loadCandidate(userId);
         if (isLike) await loadLikeStatus(userId);
+        if (ad) setDueAd(ad);
       } catch {
         setError("Couldn't save that. Try again.");
       } finally {
@@ -133,6 +158,8 @@ export default function HomeScreen() {
         )}
         {error ? <Text style={styles.error}>{error}</Text> : null}
       </View>
+
+      <AdModal ad={dueAd} onClose={() => setDueAd(null)} />
     </Screen>
   );
 }

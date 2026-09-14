@@ -138,19 +138,105 @@ type SwipeInsertChain = {
   insert: (v: Record<string, unknown>[]) => PromiseLike<{ error: unknown }>;
 };
 
+// ---------------------------------------------------------------------------
+// Bandera en memoria (bug fix 14/09/2026): Home (app/(tabs)/index.tsx) usa
+// useFocusEffect para refrescar al volver de la vista de perfil completo
+// (app/profile/[id].tsx), pero antes de este fix eso pedía SIEMPRE un
+// candidato nuevo — incluyendo cuando el usuario solo entraba a ver el
+// perfil y pulsaba Atrás sin dar Like/Dislike. Como fetchNextCandidate()
+// elige al azar de un pool de 20, el resultado se veía como "las cards
+// van rotando solas". Esta bandera es la única forma en que la vista de
+// perfil completo (que vive en otra pantalla, sin estado compartido) le
+// avisa a Home que el candidato actual quedó obsoleto de verdad porque SÍ
+// hubo un swipe — Home solo pide uno nuevo en ese caso, o en el montaje
+// inicial.
+// ---------------------------------------------------------------------------
+let candidateStaleAfterDetailSwipe = false;
+
+/** Llamar tras un sendSwipe() exitoso desde una pantalla que no es Home. */
+export function markCandidateStale(): void {
+  candidateStaleAfterDetailSwipe = true;
+}
+
+/** Home la consulta en cada focus; deja la bandera en false al leerla. */
+export function consumeCandidateStale(): boolean {
+  const wasStale = candidateStaleAfterDetailSwipe;
+  candidateStaleAfterDetailSwipe = false;
+  return wasStale;
+}
+
+// ---------------------------------------------------------------------------
+// Anuncios (PDR panel admin §5-10, rotación por Likes —
+// supabase/migrations/20260906214949_ads_likes_rotation.sql). El CRUD y los
+// tipos "de verdad" viven en el panel admin (src/lib/admin.ts, `AdRow`);
+// aquí solo se necesita lo mínimo para consumir la rotación desde el
+// cliente móvil.
+// ---------------------------------------------------------------------------
+export interface DueAd {
+  id: string;
+  title: string;
+  media_type: "image" | "video";
+  media_url: string;
+  link_url: string | null;
+}
+
 /**
- * Guarda un Like o Dislike. NOTA: el límite de 3 Likes/24h (PDR §18,
- * función `likes_used_last_24h` ya existente en la base de datos) todavía
- * NO se aplica aquí — queda pendiente para una siguiente pasada, decisión
- * explícita para esta primera versión de la card conectada a Supabase.
+ * Total de Likes (no Dislikes) que el usuario ha dado en toda su historia.
+ * Es el contador que dispara los anuncios — distinto del contador de
+ * fetchLikeLimitStatus(), que solo mira la ventana de 1 minuto/24h del
+ * límite de Likes.
+ */
+async function fetchTotalLikesGiven(userId: string): Promise<number> {
+  const { count, error } = await supabase
+    .from("likes")
+    .select("id", { count: "exact", head: true })
+    .eq("from_profile", userId)
+    .eq("is_like", true);
+  if (error) throw error;
+  return count ?? 0;
+}
+
+/**
+ * Le pregunta al servidor (función `get_due_ad`) si, con el nº total de
+ * Likes dado, toca mostrar un anuncio ahora — y si toca, lo rota dentro de
+ * su grupo de periodicidad. Devuelve null si no toca ninguno.
+ */
+async function fetchDueAd(likesCount: number): Promise<DueAd | null> {
+  const { data, error } = await (supabase.rpc as RpcFn)("get_due_ad", { likes_count: likesCount });
+  if (error) throw error;
+  const row = data as DueAd | null;
+  return row?.id ? row : null;
+}
+
+type RpcFn = (fn: string, args: Record<string, unknown>) => PromiseLike<{ data: unknown; error: unknown }>;
+
+/**
+ * Guarda un Like o Dislike. Si fue un Like, de paso comprueba si toca
+ * mostrar un anuncio (PDR panel admin §5-10) y lo devuelve — quien llame
+ * a sendSwipe() decide cómo mostrarlo (ver AdModal). Un fallo al consultar
+ * el anuncio nunca bloquea el guardado del swipe ni Discovery: se traga el
+ * error y se comporta como si no tocara ninguno.
+ *
+ * NOTA: el límite de 3 Likes/24h (PDR §18, función `likes_used_last_24h`
+ * ya existente en la base de datos) todavía NO se aplica aquí a nivel de
+ * servidor — el límite de cliente en fetchLikeLimitStatus() es la única
+ * barrera hoy. Pendiente si se quiere endurecer.
  */
 export async function sendSwipe(
   fromProfileId: string,
   toProfileId: string,
   isLike: boolean,
-): Promise<void> {
+): Promise<DueAd | null> {
   const { error } = await (supabase.from("likes") as unknown as SwipeInsertChain).insert([
     { from_profile: fromProfileId, to_profile: toProfileId, is_like: isLike },
   ]);
   if (error) throw error;
+
+  if (!isLike) return null;
+  try {
+    const totalLikes = await fetchTotalLikesGiven(fromProfileId);
+    return await fetchDueAd(totalLikes);
+  } catch {
+    return null;
+  }
 }
