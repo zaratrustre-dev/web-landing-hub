@@ -539,3 +539,85 @@ y lo sube a `vendor/` reemplazando el actual.
 **Commits en `main`**: `package.json` + `bun.lock` (fix: xlsx 0.20.3 vía
 CDN), `vendor/xlsx-0.20.3.tgz` (nuevo, binario vendored), `ARCHITECTURE.md`
 (docs: esta sección).
+
+## Sesión 14/09/2026 — CI/CD: Cloudflare Workers Builds (deploy automático)
+
+**Motivo**: el panel admin se desplegaba manualmente (`wrangler deploy` desde
+la máquina de Jose), sin ninguna relación con `git push`. Esto causó que el
+Worker en producción quedara **varios commits atrás** de `main` durante
+días (sin el botón "Importar Excel" ni el fix de seguridad de `xlsx` de la
+sesión anterior) sin que nadie lo notara, porque no había ninguna señal de
+que estuvieran desincronizados.
+
+**Qué se hizo**: se conectó el repo `zaratrustre-dev/web-landing-hub`
+(rama `main`) directo al Worker `zaratrustre-dev-web-landing-hub` vía
+**Workers Builds** (Cloudflare dashboard → el Worker → **Settings → Builds
+→ Connect**), instalando la GitHub App de Cloudflare con acceso solo a ese
+repo. A partir de ahora, **cada `git push` a `main` dispara build + deploy
+automático** — no hace falta correr nada a mano ni pedirle a Claude que
+"despliegue" (Claude tampoco puede: el conector MCP de Cloudflare que usa
+Claude no tiene ninguna herramienta de deploy, solo lectura de D1/KV/R2/
+Hyperdrive/Workers — confirmado explícitamente revisando la lista completa
+de herramientas permitidas).
+
+**Configuración del build**:
+- Build command: `bun run build`
+- Deploy command: `npx wrangler deploy` (default)
+- Root directory: `/` (repo raíz, no subcarpeta — el panel admin vive en
+  la raíz del monorepo, no en `mobile/`)
+- Preview builds activado: pushes a ramas que no sean `main` generan un
+  preview sin tocar producción.
+
+**⚠️ Gotcha importante descubierto — variables de entorno de build vs.
+runtime**: Vite necesita `VITE_SUPABASE_URL` y `VITE_SUPABASE_ANON_KEY`
+**en el momento de compilar** (se hornean en el bundle del cliente vía
+`import.meta.env`), no en runtime. Cuando el build corría en la máquina de
+Jose, tomaba estos valores de su `.env.local` local — pero el build de
+Cloudflare corre en infraestructura de Cloudflare, sin ese archivo. Sin
+esto configurado, el build compila bien (Vite no valida el valor en build
+time) pero la app **crashea en producción** al cargar cualquier página con
+"Faltan VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY" (throw explícito en
+`src/lib/supabase.ts`).
+
+**Fix**: agregar las variables en **Settings → Build → Build Variables and
+Secrets** del Worker (sección distinta de "Variables and secrets" de
+Runtime — esa es para bindings/secrets que el Worker usa en producción,
+no para el proceso de build). Los valores se sacan de Supabase Dashboard →
+Project Settings → API Keys, del proyecto `cucvqfhucmjphjpquivn`.
+
+**⚠️ Segundo gotcha, más sutil — `.env.example` tenía la publishable key
+VIEJA**: `.env.example` traía `VITE_SUPABASE_ANON_KEY=sb_publishable_
+ACJWlzQHlZjBrEguHvfOxg_3BJgxAaH`, y al configurar la variable de build se
+copió ese valor asumiendo que estaba vigente (la key pública, a diferencia
+de la `service_role`, no es secreta, así que parecía razonable que
+`.env.example` tuviera el valor real). **Estaba mal — Supabase rotó la
+publishable key en algún momento** y ese valor viejo ya daba
+`401 UNAUTHORIZED_INVALID_API_KEY` en `/auth/v1/user`. Se detectó porque el
+login de Google en `/admin` rebotaba solo a `/admin/login` sin mostrar
+ningún error visible — solo se vio la causa real inspeccionando la
+petición de red (F12 → Network) y el header de respuesta `sb-error-code:
+UNAUTHORIZED_INVALID_API_KEY`. **`.env.example` corregido** con la key
+vigente (visible en Supabase Dashboard → Project Settings → API Keys →
+"Publishable key"). Si esto vuelve a pasar en el futuro (login que rebota
+sin error visible), revisar primero la key en Supabase contra la que está
+configurada tanto en `.env.example`/`.env.local` como en las Build
+Variables de Cloudflare — no asumir que coinciden solo porque están donde
+"deberían" estar.
+
+**Cómo se diagnostica un fallo del login admin, en general** (útil para
+la próxima vez): la lógica en `src/routes/admin.index.tsx` distingue dos
+casos que se ven distinto:
+1. **Sin sesión tras el redirect de Google** → rebota silenciosamente a
+   `/admin/login` (esto fue el caso de la key vieja: la sesión nunca se
+   estableció porque Supabase rechazó las llamadas de auth).
+2. **Con sesión pero sin rol admin** → sí muestra un mensaje explícito:
+   "No tienes acceso de admin... Pide que te lo asignen en la tabla
+   `user_roles`" (esto sería el caso si el usuario de Google nunca tuvo
+   una fila `role = 'admin'` en `public.user_roles`, chequeado por la
+   función `is_admin(uid)` de Postgres).
+Si el rebote es silencioso (caso 1), mirar la pestaña Network del navegador
+en la petición a `/auth/v1/user` antes de asumir que es un tema de roles.
+
+**Commits en `main`**: `.env.example` (fix: anon key actualizada),
+2 commits `chore: trigger rebuild` (vacíos, solo para disparar el pipeline
+tras agregar las Build Variables).
