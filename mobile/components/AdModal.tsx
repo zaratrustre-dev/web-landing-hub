@@ -1,4 +1,6 @@
+import { useEffect } from "react";
 import { Ionicons } from "@expo/vector-icons";
+import { useVideoPlayer, VideoView } from "expo-video";
 import { Image, Linking, Modal, Pressable, StyleSheet, Text, View } from "react-native";
 
 import { colors, fontFamily, fontSize, radius, spacing } from "@/constants/theme";
@@ -16,19 +18,29 @@ interface AdModalProps {
  * desde Home (app/(tabs)/index.tsx) y desde la vista de perfil completo
  * (app/profile/[id].tsx), los dos únicos sitios donde se da Like.
  *
- * Solo `media_type: "image"` se renderiza dentro de la app. Los de tipo
- * "video" abren el enlace en el navegador/reproductor nativo como
- * fallback pragmático — el proyecto todavía no tiene `expo-video`/
- * `expo-av` instalado. Pendiente si se quiere reproducir vídeo in-app.
+ * `media_type: "video"` se reproduce in-app con expo-video (14/09/2026 —
+ * antes abría el enlace en el navegador como fallback porque el proyecto
+ * no tenía ninguna librería de vídeo instalada). `link_url` (si existe) se
+ * ofrece como botón "Learn more" debajo del título en vez de envolver el
+ * media en un Pressable, para no pelear con los controles nativos del
+ * reproductor de vídeo.
  */
 export function AdModal({ ad, onClose }: AdModalProps) {
+  // useVideoPlayer es un hook — se llama siempre, sin importar si el
+  // anuncio actual es de imagen o si `ad` es null; con source null el
+  // player queda inactivo y no consume nada.
+  const videoSource = ad?.media_type === "video" ? ad.media_url : null;
+  const player = useVideoPlayer(videoSource, (p) => {
+    p.loop = true;
+  });
+
+  useEffect(() => {
+    if (videoSource) player.play();
+  }, [videoSource, player]);
+
   if (!ad) return null;
 
-  function handleMediaPress() {
-    if (ad!.media_type === "video") {
-      Linking.openURL(ad!.media_url);
-      return;
-    }
+  function handleLearnMore() {
     if (ad!.link_url) Linking.openURL(ad!.link_url);
   }
 
@@ -46,24 +58,26 @@ export function AdModal({ ad, onClose }: AdModalProps) {
             <Ionicons name="close" size={20} color={colors.text} />
           </Pressable>
 
-          <Pressable
-            onPress={handleMediaPress}
-            disabled={ad.media_type === "image" && !ad.link_url}
-            style={styles.mediaWrapper}
-          >
-            {ad.media_type === "image" ? (
-              <Image source={{ uri: ad.media_url }} style={styles.media} resizeMode="cover" />
-            ) : (
-              <View style={[styles.media, styles.videoFallback]}>
-                <Ionicons name="play-circle-outline" size={48} color={colors.textFaint} />
-                <Text style={styles.videoFallbackText}>Tap to watch</Text>
-              </View>
-            )}
-          </Pressable>
+          {ad.media_type === "image" ? (
+            <Image source={{ uri: ad.media_url }} style={styles.media} resizeMode="cover" />
+          ) : (
+            <VideoView style={styles.media} player={player} nativeControls contentFit="cover" />
+          )}
 
           <Text style={styles.title} numberOfLines={2}>
             {ad.title}
           </Text>
+
+          {ad.link_url ? (
+            <Pressable
+              onPress={handleLearnMore}
+              style={({ pressed }) => [styles.learnMoreButton, pressed && styles.learnMorePressed]}
+              accessibilityRole="button"
+            >
+              <Text style={styles.learnMoreText}>Learn more</Text>
+              <Ionicons name="open-outline" size={16} color={colors.textSecondary} />
+            </Pressable>
+          ) : null}
 
           <Pressable
             onPress={onClose}
@@ -107,20 +121,30 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  mediaWrapper: { width: "100%" },
   media: {
     width: "100%",
     aspectRatio: 1,
     borderRadius: radius.md,
     backgroundColor: colors.photoBackground,
   },
-  videoFallback: { alignItems: "center", justifyContent: "center", gap: spacing.xs },
-  videoFallbackText: { fontSize: fontSize.sm, color: colors.textFaint },
   title: {
     fontFamily: fontFamily.heading,
     fontSize: fontSize.lg,
     color: colors.text,
     textAlign: "center",
+  },
+  learnMoreButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.xs,
+    paddingVertical: spacing.xs,
+  },
+  learnMorePressed: { opacity: 0.7 },
+  learnMoreText: {
+    fontFamily: fontFamily.mono,
+    fontSize: fontSize.xs,
+    letterSpacing: 0.6,
+    color: colors.textSecondary,
   },
   continueButton: {
     paddingVertical: spacing.md,
