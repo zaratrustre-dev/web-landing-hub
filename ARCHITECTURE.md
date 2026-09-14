@@ -425,3 +425,74 @@ Verificado en los 3 commits: cero archivos `.env`/`.env.production`/
   límite de 3 (`MAX_SKILLS`), la búsqueda ni el resto de la lógica de
   `toggle()`.
 - Commit `81001b2` en `main`.
+
+## Sesión 14/09/2026 — Panel admin: importar usuarios desde Excel (nuevo)
+
+**Objetivo**: permitir a Jose subir un `.xlsx` de usuarios de prueba/demo
+desde Ajustes → Usuarios, sin tocar backend (no hay Edge Function nueva —
+reutiliza `admin-users` y las funciones ya existentes de `src/lib/admin.ts`:
+`createUser`, `uploadProfilePhoto`, `updateProfilePhoto`). Estos usuarios
+**nunca inician sesión de verdad** (no hay login por contraseña en el MVP,
+solo Google OAuth) — sirven únicamente para poblar el directorio en
+pruebas/demos.
+
+**Archivos nuevos**:
+- `src/lib/bulk-import-users.ts`: parseo del Excel con SheetJS (`xlsx`,
+  nueva dependencia en `package.json`), validación de cada fila contra las
+  restricciones reales de `profiles`, y orquestación de la importación.
+- `src/components/admin/BulkImportUsersDialog.tsx`: diálogo (elegir
+  archivo → previsualización/errores → confirmar → progreso → resultado).
+
+**Archivos modificados**:
+- `src/lib/admin.ts`: `fetchAllAdminEmails()` (reutiliza `admin_list_profiles`
+  con `page_limit` grande, para comprobar duplicados antes de importar) y
+  campo `onboarding_completed` añadido a `UpdateProfileInput`.
+- `src/routes/admin.users.index.tsx`: botón "Importar Excel" junto a
+  "+ Crear usuario".
+
+**Validaciones por fila** (todo-o-nada: si una sola fila falla, no se
+importa ninguna):
+- Email obligatorio, formato válido, sin duplicados dentro del propio
+  archivo NI contra la base de datos real (se comprueba ANTES de crear
+  nada, vía `fetchAllAdminEmails()`).
+- Nombre obligatorio.
+- Edad: entero 18-120 (mismo check constraint que `profiles.age`).
+- País: acepta español ("España", "México"...) o el nombre exacto en
+  inglés del desplegable. Traducción vía `ES_TO_EN_COUNTRY`, un diccionario
+  de ~210 alias que cubre los 194 países de `COUNTRIES`
+  (`src/lib/countries.ts`). Si no reconoce el país, rechaza la fila
+  explícitamente — nunca adivina ni deja pasar un valor no normalizado
+  (evitaría que el filtro de país del panel funcionara para ese usuario).
+- Rol: debe ser uno exacto de los 9 valores del enum `professional_role`
+  (en minúsculas, igual que ya vienen en el Excel de ejemplo).
+- Profesión: obligatoria, ≤20 caracteres (mismo check constraint que
+  `profiles.profession`) — se rechaza la fila si se excede, nunca se trunca
+  en silencio.
+- Descripción: opcional, ≤200 caracteres si viene.
+- Columna "Foto": algunos Excels exportados desde Google Sheets la guardan
+  como texto literal `=IMAGE("url")` en vez de una URL simple (no es una
+  fórmula real — `IMAGE()` no existe en Excel — Google Sheets la exporta
+  igualmente como texto). `extractPhotoUrl()` detecta ese patrón con una
+  regex y saca la URL de dentro de las comillas; si la celda ya es una URL
+  simple, la usa tal cual. Sin este parche, el importador intentaría
+  descargar la cadena `=IMAGE(...)` como si fuera una URL y fallaría la
+  fila (con el consiguiente rollback de todo el lote).
+- No se piden `role_sought` ni `skills` (el Excel no las trae) — quedan
+  vacías; el resto del perfil sí se marca `onboarding_completed = true`.
+
+**Ejecución e integridad**: crea usuario por usuario en orden (Admin API →
+descarga y sube la foto al bucket `profile-photos` tal cual venga
+(SVG incluido, sin convertir a otro formato) → marca el perfil como
+completo). Si cualquier paso de cualquier fila falla a mitad de la
+importación, se **revierte automáticamente** (`deleteUser`) todo lo ya
+creado en ese mismo lote, para que nunca queden importaciones parciales.
+
+**Commits en `main`**: `src/lib/bulk-import-users.ts` (feat, nuevo),
+`src/components/admin/BulkImportUsersDialog.tsx` (feat, nuevo),
+`src/lib/admin.ts` (feat), `src/routes/admin.users.index.tsx` (feat),
+`package.json` (chore: añade `xlsx`).
+
+**Pendiente/decisión de Jose registrada**: a partir de esta sesión, Claude
+sube los cambios de código directamente al repo (commits vía API) en vez
+de solo entregar los archivos para pegar a mano — Jose sigue revisando y
+puede pedir revertir cualquier commit.
