@@ -45,6 +45,47 @@ function mapCandidateRow(row: CandidateRow): CandidateProfile {
 
 const CANDIDATE_POOL_SIZE = 20;
 
+// PDR §18 — límite de Likes. La ventana real de producción es 24h; se deja
+// en 1 minuto TEMPORALMENTE para pruebas (debe coincidir con el intervalo
+// de la función `likes_used_last_24h` en Supabase — ver migración
+// 20260914072120_temp_likes_window_1_minute.sql). Revertir ambos a 24h
+// antes de producción.
+export const LIKE_LIMIT = 3;
+export const LIKE_WINDOW_MS = 60 * 1000;
+
+export interface LikeLimitStatus {
+  remaining: number;
+  limit: number;
+  /** Momento en que se libera el próximo Like, o null si aún quedan Likes. */
+  resetAt: Date | null;
+}
+
+/**
+ * Calcula cuántos Likes le quedan al usuario en la ventana actual y, si ya
+ * no le quedan, cuándo se libera el siguiente. Se hace en cliente contra
+ * `likes` directamente (RLS ya permite leer los propios) en vez de vía RPC,
+ * para tener también el timestamp del Like más antiguo de la ventana y
+ * poder calcular el countdown.
+ */
+export async function fetchLikeLimitStatus(userId: string): Promise<LikeLimitStatus> {
+  const since = new Date(Date.now() - LIKE_WINDOW_MS).toISOString();
+  const { data, error } = await supabase
+    .from("likes")
+    .select("created_at")
+    .eq("from_profile", userId)
+    .eq("is_like", true)
+    .gte("created_at", since)
+    .order("created_at", { ascending: true });
+  if (error) throw error;
+
+  const rows = (data ?? []) as { created_at: string }[];
+  const remaining = Math.max(0, LIKE_LIMIT - rows.length);
+  const resetAt =
+    remaining === 0 && rows[0] ? new Date(new Date(rows[0].created_at).getTime() + LIKE_WINDOW_MS) : null;
+
+  return { remaining, limit: LIKE_LIMIT, resetAt };
+}
+
 /**
  * Trae un candidato para Discovery (PDR §04): excluye el propio perfil y
  * cualquier perfil que el usuario ya haya likeado/dislikeado (tabla

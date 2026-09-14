@@ -13,6 +13,8 @@ interface ProfileCardProps {
   onOpenProfile?: () => void;
   /** Deshabilita ambos botones mientras se guarda el swipe anterior. */
   disabled?: boolean;
+  /** PDR §18: deshabilita solo Like cuando se agotó el límite. */
+  likeDisabled?: boolean;
 }
 
 // PDR §04 / skill connect-it-profile-card: profesión máx. 20 caracteres.
@@ -24,7 +26,14 @@ function truncate(text: string, max: number): string {
   return text.length > max ? `${text.slice(0, max - 1).trimEnd()}…` : text;
 }
 
-export function ProfileCard({ candidate, onLike, onDislike, onOpenProfile, disabled }: ProfileCardProps) {
+export function ProfileCard({
+  candidate,
+  onLike,
+  onDislike,
+  onOpenProfile,
+  disabled,
+  likeDisabled,
+}: ProfileCardProps) {
   const nameAge = [candidate.name, candidate.age ? String(candidate.age) : null]
     .filter(Boolean)
     .join(", ");
@@ -93,11 +102,11 @@ export function ProfileCard({ candidate, onLike, onDislike, onOpenProfile, disab
             accessibilityRole="button"
             accessibilityLabel="Like"
             onPress={onLike}
-            disabled={disabled}
+            disabled={disabled || likeDisabled}
             style={({ pressed }) => [
               styles.actionButton,
               styles.likeButton,
-              (pressed || disabled) && styles.actionPressed,
+              (pressed || disabled || likeDisabled) && styles.actionPressed,
             ]}
           >
             <Ionicons name="heart" size={22} color={colors.primaryForeground} />

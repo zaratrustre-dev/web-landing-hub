@@ -7,24 +7,27 @@ import { ReportProfileModal } from "@/components/ReportProfileModal";
 import { Screen } from "@/components/Screen";
 import { colors, fontFamily, fontSize, radius, spacing } from "@/constants/theme";
 import { getPublicProfileUrl } from "@/constants/urls";
-import { fetchProfileById, sendSwipe, type CandidateProfile } from "@/lib/discovery";
+import {
+  fetchLikeLimitStatus,
+  fetchProfileById,
+  sendSwipe,
+  type CandidateProfile,
+} from "@/lib/discovery";
 import { reportProfile } from "@/lib/moderation";
 import { useAuth } from "@/providers/AuthProvider";
 
 /**
  * Vista de perfil completo de Discovery (PDR §04), abierta al tocar la
  * ProfileCard desde Home. Permite Like/Dislike (mismo `sendSwipe` que la
- * card), compartir el enlace público del perfil y reportarlo
- * (connect-it-moderation, tabla `reports`).
- *
- * Fuera de alcance a propósito, pendiente de una siguiente pasada:
- * - Límite de 3 Likes/24h (PDR §18).
+ * card, respetando el límite de Likes de PDR §18), compartir el enlace
+ * público del perfil y reportarlo (connect-it-moderation, tabla `reports`).
  */
 export default function ProfileDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { profile: myProfile } = useAuth();
 
   const [candidate, setCandidate] = useState<CandidateProfile | null>(null);
+  const [likesExhausted, setLikesExhausted] = useState(false);
   const [loading, setLoading] = useState(true);
   const [swiping, setSwiping] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -39,9 +42,16 @@ export default function ProfileDetailScreen() {
       .finally(() => setLoading(false));
   }, [id]);
 
+  useEffect(() => {
+    if (!myProfile?.id) return;
+    fetchLikeLimitStatus(myProfile.id)
+      .then((status) => setLikesExhausted(status.remaining === 0))
+      .catch(() => setLikesExhausted(false));
+  }, [myProfile?.id]);
+
   const handleSwipe = useCallback(
     async (isLike: boolean) => {
-      if (!myProfile?.id || !candidate || swiping) return;
+      if (!myProfile?.id || !candidate || swiping || (isLike && likesExhausted)) return;
       setSwiping(true);
       try {
         await sendSwipe(myProfile.id, candidate.id, isLike);
@@ -51,7 +61,7 @@ export default function ProfileDetailScreen() {
         setSwiping(false);
       }
     },
-    [myProfile, candidate, swiping],
+    [myProfile, candidate, swiping, likesExhausted],
   );
 
   const handleShare = useCallback(async () => {
@@ -152,11 +162,11 @@ export default function ProfileDetailScreen() {
                   accessibilityRole="button"
                   accessibilityLabel="Like"
                   onPress={() => handleSwipe(true)}
-                  disabled={swiping}
+                  disabled={swiping || likesExhausted}
                   style={({ pressed }) => [
                     styles.actionButton,
                     styles.likeButton,
-                    (pressed || swiping) && styles.actionPressed,
+                    (pressed || swiping || likesExhausted) && styles.actionPressed,
                   ]}
                 >
                   <Ionicons name="heart" size={22} color={colors.primaryForeground} />
