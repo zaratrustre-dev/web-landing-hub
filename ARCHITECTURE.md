@@ -694,6 +694,85 @@ CLI para sincronizar/diffear migraciones, esta discrepancia de nombre
 puede causar confusión. Pendiente de renombrar el archivo local a
 `20260914072147_...` para que coincida.
 
+## Sesión 14/09/2026 — 4 bugs reportados + 1 update de diseño (Discovery)
+
+**Bugs reportados por Jose, todos con causa raíz confirmada leyendo el
+código real (no memoria):**
+
+1. **"Entro al perfil, doy Atrás sin like/dislike, y la card cambia igual
+   (van rotando)"** — `app/(tabs)/index.tsx` pedía SIEMPRE un candidato
+   nuevo en `useFocusEffect`, incluso al volver de `app/profile/[id].tsx`
+   sin haber swipeado — y `fetchNextCandidate()` elige al azar de un pool
+   de 20. **Fix**: nueva bandera en memoria en `lib/discovery.ts`
+   (`markCandidateStale()` / `consumeCandidateStale()`) — la vista de
+   perfil completo solo la activa cuando SÍ hubo un swipe; Home solo pide
+   un candidato nuevo si no tiene uno cargado o si la bandera está
+   activa. El contador de Likes sí se refresca siempre.
+
+2. **"Doy 3 likes, pauso 1 min, doy 3 más, el anuncio nunca salta"** —
+   doble causa: (a) `get_due_ad()`/`pick_and_rotate_ad_for_group()`
+   (migración `20260906214949_ads_likes_rotation.sql`) seguían con el
+   `if not public.is_admin() then raise exception` que se dejó a
+   propósito como placeholder "hasta que exista el flujo real de Likes
+   de la app de usuario final" — ese flujo ya existía (sesión anterior),
+   pero nunca se volvió a abrir el permiso; (b) el cliente móvil nunca
+   llamaba a esas funciones. **Fix**: migración
+   `20260914200000_ads_open_to_authenticated.sql` (aplicada en Supabase)
+   cambia el chequeo a `auth.uid() is null` (cualquier autenticado, no
+   solo admin) + `grant execute ... to authenticated`; `sendSwipe()` en
+   `lib/discovery.ts` ahora consulta `get_due_ad()` tras cada Like y
+   devuelve el anuncio si toca; `components/AdModal.tsx` (nuevo) lo
+   muestra, cableado en Home y en la vista de perfil completo. Solo
+   `media_type: "image"` se renderiza in-app — "video" abre el enlace en
+   el navegador como fallback pragmático (no hay `expo-video`/`expo-av`
+   instalado; pendiente si se quiere in-app).
+
+3. **"Al cerrar sesión no redirige a Welcome, y si doy Atrás en el
+   navegador entro a la app sin usuario"** — el único guard de sesión
+   vivía en `app/index.tsx`, que solo se ejecuta la primera vez que se
+   visita `/` — no es reactivo a rutas ya visitadas. En web, el botón
+   Atrás del navegador puede saltar directo a una ruta protegida del
+   historial (ej. `/settings`) sin volver a pasar por ese chequeo,
+   renderizándola con `session`/`profile` en null. Además,
+   `lib/auth.ts#signOut()` no tenía try/catch — si `supabase.auth.signOut()`
+   fallaba por red, el `router.replace()` de `settings.tsx` nunca se
+   ejecutaba y el logout no hacía nada visible. **Fix**: nuevo `AuthGate`
+   global y reactivo en `app/_layout.tsx` (observa `session`/`pathname` y
+   redirige a `/welcome` desde cualquier ruta protegida sin sesión, no
+   solo tras logout); `signOut()` ahora reintenta en `scope: "local"` si
+   el signOut global falla, para no dejar la sesión "a medias".
+
+4. **"El QR no lleva a ningún perfil, dirección no encontrada"** —
+   `PUBLIC_PROFILE_BASE_URL` en `constants/urls.ts` apuntaba a
+   `https://connect-it.app/p`, un dominio elegido solo por coherencia con
+   el email de soporte pero **nunca conectado como Custom Domain en
+   Cloudflare** (sin DNS, nada en el repo que lo configure — confirmado,
+   no es un bug de código). La ruta `/p/$userId` en sí
+   (`src/routes/p.$userId.tsx`) está bien. **Fix**: el valor por defecto
+   pasa a ser el subdominio real de Cloudflare Workers donde corre hoy el
+   panel/web, con override vía `EXPO_PUBLIC_PUBLIC_PROFILE_BASE_URL` para
+   el día que `connect-it.app` se conecte de verdad (tarea de
+   dashboard/DNS que Jose tiene que hacer, no código).
+
+**Update de diseño**: `ProfileCard` mostraba hasta 3 skills con
+`numberOfLines={1}` + ellipsis (una skill larga se veía cortada con
+"..."). Ahora muestra solo la principal (la primera), completa, con
+`adjustsFontSizeToFit` para reducir el tamaño de fuente en vez de
+truncar. El resto de skills sigue viéndose completo en la vista de
+perfil completo (sección "CORE SKILLS"), sin cambios ahí.
+
+**Commits en `main`**: `fix(mobile): Discovery — candidato ya no rota al
+volver del perfil sin swipe; anuncios ahora se disparan tras un Like`,
+`fix(mobile): logout dejaba entrar sin sesión al volver con el botón
+Atrás del navegador`, `fix(mobile): enlace/QR de 'Compartir cuenta'
+apuntaba a un dominio nunca conectado`, `feat(mobile): ProfileCard
+muestra solo la skill principal, completa (sin cortar)`.
+
+**Pendiente/decisión de Jose**: confirmar si `connect-it.app` se va a
+conectar de verdad como Custom Domain en Cloudflare (y cuándo), para
+saber si hay que setear `EXPO_PUBLIC_PUBLIC_PROFILE_BASE_URL` en algún
+momento o dejar el subdominio de Workers como definitivo.
+
 **Pendiente de Fase 2** (fuera de alcance de esta sesión, a propósito):
 - Búsqueda, filtros (categoría/skill/país).
 - Matches (qué pasa cuando el Like es mutuo — tabla `matches` ya existe).
