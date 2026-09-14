@@ -496,3 +496,46 @@ creado en ese mismo lote, para que nunca queden importaciones parciales.
 sube los cambios de código directamente al repo (commits vía API) en vez
 de solo entregar los archivos para pegar a mano — Jose sigue revisando y
 puede pedir revertir cualquier commit.
+
+## Sesión 14/09/2026 — Fix seguridad: `xlsx` vendored desde CDN oficial de SheetJS
+
+**Motivo**: la versión de npm de `xlsx` (`^0.18.5`) tiene 2 vulnerabilidades
+conocidas sin parchear desde 2023 — Prototype Pollution
+([GHSA-4r6h-8v6p-xvw6](https://github.com/advisories/GHSA-4r6h-8v6p-xvw6)) y
+ReDoS ([GHSA-5pgg-2g8v-p4x9](https://github.com/advisories/GHSA-5pgg-2g8v-p4x9)).
+SheetJS dejó de publicar versiones corregidas en el registro de npm — la
+única forma de obtener la versión parcheada (>=0.20.2) es descargarla desde
+su propio CDN (`cdn.sheetjs.com`), que **no está en la whitelist de red del
+sandbox de Claude** (`host_not_allowed`). Por eso el tarball se descargó
+manualmente (Jose, desde su máquina) y se subió a Claude para vendoring.
+
+**Qué se hizo**:
+- Verificado el checksum MD5 del tarball (`aac39517149362ea8123d8a303486c3c`)
+  contra el hash oficial publicado por SheetJS para la versión 0.20.3, antes
+  de usarlo.
+- Tarball guardado en `vendor/xlsx-0.20.3.tgz` dentro del repo (patrón de
+  "vendoring" documentado oficialmente por SheetJS para Bun/npm cuando no
+  hay acceso directo al CDN).
+- `package.json`: `"xlsx": "^0.18.5"` → `"xlsx": "file:vendor/xlsx-0.20.3.tgz"`.
+- `bun install` regeneró `bun.lock` en consecuencia.
+- Verificado funcionalmente: `XLSX.read` + `XLSX.utils.sheet_to_json`
+  (las dos únicas funciones que usa `bulk-import-users.ts`, líneas 352 y
+  362) siguen funcionando igual — probado con un Excel de prueba simulando
+  la plantilla real de importación de usuarios.
+- `bun run build` compila sin errores; `xlsx.mjs` queda empaquetado
+  correctamente en `.output/server/_libs/`.
+- Sin cambios de comportamiento relevantes: el único cambio "potencialmente
+  disruptivo" documentado por SheetJS entre 0.18.5 y 0.20.3 es la
+  interpretación de fechas (UTC vs. hora local) — no aplica, la plantilla
+  de importación de usuarios no tiene columnas de fecha.
+
+**⚠️ Regla importante para el futuro**: nunca reinstalar `xlsx` con
+`bun add xlsx` a secas — eso volvería a traer la versión vulnerable de npm
+(`^0.18.5`, la última publicada ahí). Si se necesita actualizar la versión
+vendored en el futuro, repetir el mismo proceso: alguien con acceso a
+`cdn.sheetjs.com` descarga el tarball nuevo, verifica el checksum oficial,
+y lo sube a `vendor/` reemplazando el actual.
+
+**Commits en `main`**: `package.json` + `bun.lock` (fix: xlsx 0.20.3 vía
+CDN), `vendor/xlsx-0.20.3.tgz` (nuevo, binario vendored), `ARCHITECTURE.md`
+(docs: esta sección).
