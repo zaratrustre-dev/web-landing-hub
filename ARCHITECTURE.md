@@ -672,12 +672,27 @@ endurecer en servidor.
 `connect-it-moderation` — reportar chat, unmatch, block y moderación de
 Global Chat (link-blocking, spam, rate limiting) quedan pendientes.
 
-**Drift detectado (no bloqueante, anotado para sincronizar)**: la migración
-`20260912113715_public_profile_share` existe aplicada en Supabase pero NO
-como archivo en `supabase/migrations/` del repo — probablemente aplicada
-directo desde el dashboard sin commitear el `.sql`. Revisar y reconstruir
-el archivo (mismo patrón que se usó el 11/09 para las 4 migraciones que
-faltaban, leyendo `supabase_migrations.schema_migrations`).
+~~**Drift detectado**: la migración `20260912113715_public_profile_share`
+existe aplicada en Supabase pero NO como archivo en `supabase/migrations/`
+del repo.~~ — **Resuelto el 14/09/2026**: se reconstruyó
+`supabase/migrations/20260912113715_public_profile_share.sql` leyendo la
+definición real en vivo (`pg_get_functiondef()`,
+`information_schema.routine_privileges`, `obj_description()`) vía MCP de
+Supabase, no desde memoria/documentación — el archivo commiteado coincide
+exactamente con la función `get_public_profile` que ya corre en
+producción. No se reaplicó nada contra Supabase (ya estaba aplicada, y
+reintentarlo con la misma versión de migración habría fallado contra
+`schema_migrations`).
+
+**⚠️ Drift menor pendiente, detectado de paso**: la migración
+`temp_likes_window_1_minute` está registrada en Supabase con versión
+`20260914072147`, pero el archivo local en el repo se llama
+`20260914072120_temp_likes_window_1_minute.sql` (27 segundos de diferencia
+en el timestamp). No afecta el comportamiento — el nombre de archivo no
+cambia qué SQL se ejecuta —, pero si en algún momento se usa la Supabase
+CLI para sincronizar/diffear migraciones, esta discrepancia de nombre
+puede causar confusión. Pendiente de renombrar el archivo local a
+`20260914072147_...` para que coincida.
 
 **Pendiente de Fase 2** (fuera de alcance de esta sesión, a propósito):
 - Búsqueda, filtros (categoría/skill/país).
