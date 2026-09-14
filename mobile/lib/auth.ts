@@ -95,5 +95,25 @@ export function useGoogleSignIn() {
 }
 
 export async function signOut() {
-  await supabase.auth.signOut();
+  // Bug fix (14/09/2026): antes esto era un `await supabase.auth.signOut()`
+  // sin try/catch, y handleSignOut() en settings.tsx llama a router.replace
+  // justo después — si esta llamada de red fallaba (token ya inválido, sin
+  // conexión, key de Supabase rotada como pasó en una sesión anterior), la
+  // excepción saltaba directo al `finally` de handleSignOut sin pasar por
+  // el replace, y el logout no hacía nada visible. Ahora, si el signOut
+  // "global" (revoca el refresh token en el servidor) falla, se reintenta
+  // en scope "local" para al menos limpiar la sesión de este dispositivo:
+  // el AuthGate global (app/_layout.tsx) se encarga de redirigir a Welcome
+  // en cuanto AuthProvider detecte session === null, sin depender de que
+  // el caller haga su propio router.replace.
+  try {
+    await supabase.auth.signOut();
+  } catch {
+    try {
+      await supabase.auth.signOut({ scope: "local" });
+    } catch {
+      // Si esto también falla no hay más que intentar aquí — no se
+      // relanza para que handleSignOut() no se quede bloqueado.
+    }
+  }
 }
