@@ -621,3 +621,72 @@ en la petición a `/auth/v1/user` antes de asumir que es un tema de roles.
 **Commits en `main`**: `.env.example` (fix: anon key actualizada),
 2 commits `chore: trigger rebuild` (vacíos, solo para disparar el pipeline
 tras agregar las Build Variables).
+
+## Sesión 14/09/2026 — Home: Discovery / ProfileCard (nuevo)
+
+**Objetivo**: Home pasa de placeholder vacío a mostrar Discovery real (PDR
+§04) — candidato real, Like/Dislike, perfil completo, reportar perfil y
+límite de Likes.
+
+**Diseño**: extraído de exports React/CSS de Figma que Jose pegó en el chat
+(el Dev Mode MCP Server de Figma requiere plan de pago — confirmado durante
+la sesión, no está disponible). Colores/spacing tomados literal del export;
+tokens nuevos en `theme.ts`: `cardBackground`, `cardButtonBackground`,
+`textSecondary`, `photoBackground`.
+
+**Archivos nuevos**:
+- `lib/discovery.ts`: `fetchNextCandidate()` (excluye el propio perfil y los
+  ya swipeados, vía `likes`), `fetchProfileById()`, `sendSwipe()`,
+  `fetchLikeLimitStatus()`.
+- `lib/moderation.ts`: `reportProfile()` — insert en `reports`
+  (`target_type: 'profile'`), RLS ya permite `reporter_id = auth.uid()`.
+- `components/ProfileCard.tsx`: card de Home. Reglas de estabilidad
+  seguidas: profesión truncada a 20 caracteres, máx. 3 skills,
+  `numberOfLines={1}` en nombre/profesión para que el alto de la card nunca
+  cambie, botones Like/Dislike en posición fija.
+- `components/ReportProfileModal.tsx`: bottom sheet con motivos
+  predefinidos + "Other" con texto libre (≤500 caracteres).
+- `app/profile/[id].tsx`: vista de perfil completo (foto grande,
+  descripción, link a portfolio, Like/Dislike, compartir — reutiliza
+  `getPublicProfileUrl()` de `share-profile.tsx` —, reportar, Core Skills).
+
+**Archivos modificados**: `app/(tabs)/index.tsx` (Home real), `theme.ts`,
+`package.json` (+ `expo-linear-gradient`, para el degradado sobre la foto).
+
+**Límite de Likes (PDR §18)** — `supabase/migrations/
+20260914072120_temp_likes_window_1_minute.sql`, aplicada directo contra
+Supabase (`cucvqfhucmjphjpquivn`) vía MCP: `likes_used_last_24h()` usa
+`interval '1 minute'` en vez de `'24 hours'`, **a propósito, solo para
+pruebas** (mismo nombre de función, para no romper nada que ya la llame).
+`fetchLikeLimitStatus()` en el cliente NO depende de esa función — lee
+`likes` directo y calcula `remaining`/`resetAt` con su propia constante
+`LIKE_WINDOW_MS`, así que revertir una sin la otra no rompe nada, pero
+**hay que revertir las dos** antes de producción (grep `TEMPORAL` en
+`lib/discovery.ts` y en `supabase/migrations/`).
+
+**⚠️ El límite de Likes es solo de cliente** — no hay trigger/constraint en
+BD que rechace el insert si alguien se salta la UI. Pendiente si se quiere
+endurecer en servidor.
+
+**Reportar perfil**: solo la parte "Report Profile" de
+`connect-it-moderation` — reportar chat, unmatch, block y moderación de
+Global Chat (link-blocking, spam, rate limiting) quedan pendientes.
+
+**Drift detectado (no bloqueante, anotado para sincronizar)**: la migración
+`20260912113715_public_profile_share` existe aplicada en Supabase pero NO
+como archivo en `supabase/migrations/` del repo — probablemente aplicada
+directo desde el dashboard sin commitear el `.sql`. Revisar y reconstruir
+el archivo (mismo patrón que se usó el 11/09 para las 4 migraciones que
+faltaban, leyendo `supabase_migrations.schema_migrations`).
+
+**Pendiente de Fase 2** (fuera de alcance de esta sesión, a propósito):
+- Búsqueda, filtros (categoría/skill/país).
+- Matches (qué pasa cuando el Like es mutuo — tabla `matches` ya existe).
+- El resto de `connect-it-moderation` (ver arriba).
+
+**Commits en `main`**: `feat(mobile): Discovery — ProfileCard conectada a
+Supabase en Home`, `feat(mobile): Discovery — vista de perfil completo al
+tocar la card`, `feat(mobile): Reportar perfil (connect-it-moderation, PDR
+§22)`, `feat(mobile): límite de Likes (PDR §18) — ventana TEMPORAL de 1
+minuto` (+ 1 merge commit sincronizando con el importador de Excel del
+panel admin, sin conflictos — tocaba archivos distintos).
