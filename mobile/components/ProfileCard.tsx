@@ -38,8 +38,13 @@ export function ProfileCard({
     .filter(Boolean)
     .join(", ");
   const profession = candidate.profession ? truncate(candidate.profession, MAX_PROFESSION_LENGTH) : null;
-  // Máximo 3 skills (ya forzado en BD por trigger); slice defensivo por si acaso.
-  const skills = candidate.skills.slice(0, 3);
+  // Update (14/09/2026): la card muestra solo la skill principal (la
+  // primera), completa — antes mostraba hasta 3 con numberOfLines={1} +
+  // ellipsis, así que una skill larga se veía cortada y ninguna de las
+  // otras aportaba mucho en el espacio de una card. El resto de skills ya
+  // se ve completo en la vista de perfil (app/profile/[id].tsx, sección
+  // "CORE SKILLS"), que no cambia con este fix.
+  const primarySkill = candidate.skills[0] ?? null;
 
   return (
     <Pressable
@@ -72,15 +77,18 @@ export function ProfileCard({
           </Text>
         ) : null}
 
-        {skills.length > 0 ? (
+        {primarySkill ? (
           <View style={styles.chipsRow}>
-            {skills.map((skill) => (
-              <View key={skill} style={styles.chip}>
-                <Text style={styles.chipText} numberOfLines={1} ellipsizeMode="tail">
-                  {skill.toUpperCase()}
-                </Text>
-              </View>
-            ))}
+            <View style={styles.chip}>
+              <Text
+                style={styles.chipText}
+                numberOfLines={1}
+                adjustsFontSizeToFit
+                minimumFontScale={0.6}
+              >
+                {primarySkill.toUpperCase()}
+              </Text>
+            </View>
           </View>
         ) : null}
 
@@ -143,7 +151,8 @@ const styles = StyleSheet.create({
   profession: { fontFamily: fontFamily.body, fontSize: fontSize.base, color: colors.textSecondary },
   chipsRow: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
   chip: {
-    maxWidth: 140,
+    maxWidth: "100%",
+    alignSelf: "flex-start",
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.xs + 2,
     borderRadius: radius.md,
