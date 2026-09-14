@@ -771,7 +771,25 @@ muestra solo la skill principal, completa (sin cortar)`.
 **Pendiente/decisión de Jose**: confirmar si `connect-it.app` se va a
 conectar de verdad como Custom Domain en Cloudflare (y cuándo), para
 saber si hay que setear `EXPO_PUBLIC_PUBLIC_PROFILE_BASE_URL` en algún
-momento o dejar el subdominio de Workers como definitivo.
+momento o dejar el subdominio de Workers como definitivo. **Aplazado a
+propósito el 14/09/2026** — se deja tal cual por ahora.
+
+**Actualización 14/09/2026 (mismo día, segunda pasada)**: se agregó
+`expo-video` (`^57.0.4`, mismo esquema de versión que el resto de
+paquetes `expo-*`) y `AdModal.tsx` ahora reproduce los anuncios de
+`media_type: "video"` in-app con `useVideoPlayer` + `VideoView`
+(controles nativos, loop), en vez de abrir el `media_url` en el
+navegador. `link_url` (si el anuncio lo trae) se muestra como botón
+"Learn more" separado del media, para no pelear con los gestos táctiles
+del reproductor. **No se corrió `bun install` ni ningún rebuild nativo
+en esta sesión** — `bun.lock` sigue sin el registro de `expo-video`
+todavía. Pendiente para Jose antes de probar esto en un dispositivo real
+(no en Expo Go, que no incluye módulos nativos custom): (1) `bun install`
+localmente para que se resuelva `expo-video` y se actualice `bun.lock`;
+(2) como `expo-video` trae código nativo, hace falta un nuevo build
+nativo (EAS Build o `expo prebuild` + rebuild local) — un simple reload
+de JS no alcanza, a diferencia del resto de cambios de esta sesión que
+sí son solo JS.
 
 **Pendiente de Fase 2** (fuera de alcance de esta sesión, a propósito):
 - Búsqueda, filtros (categoría/skill/país).
