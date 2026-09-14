@@ -1,22 +1,23 @@
 import { useCallback, useEffect, useState } from "react";
 import { router, useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import { ActivityIndicator, Image, Linking, Pressable, Share, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Alert, Image, Linking, Pressable, Share, StyleSheet, Text, View } from "react-native";
 
+import { ReportProfileModal } from "@/components/ReportProfileModal";
 import { Screen } from "@/components/Screen";
 import { colors, fontFamily, fontSize, radius, spacing } from "@/constants/theme";
 import { getPublicProfileUrl } from "@/constants/urls";
 import { fetchProfileById, sendSwipe, type CandidateProfile } from "@/lib/discovery";
+import { reportProfile } from "@/lib/moderation";
 import { useAuth } from "@/providers/AuthProvider";
 
 /**
  * Vista de perfil completo de Discovery (PDR §04), abierta al tocar la
  * ProfileCard desde Home. Permite Like/Dislike (mismo `sendSwipe` que la
- * card) y compartir el enlace público del perfil.
+ * card), compartir el enlace público del perfil y reportarlo
+ * (connect-it-moderation, tabla `reports`).
  *
  * Fuera de alcance a propósito, pendiente de una siguiente pasada:
- * - Reportar perfil (tabla `reports` ya existe en BD, sin UI todavía —
- *   ver connect-it-moderation). El botón se muestra pero no hace nada.
  * - Límite de 3 Likes/24h (PDR §18).
  */
 export default function ProfileDetailScreen() {
@@ -27,6 +28,8 @@ export default function ProfileDetailScreen() {
   const [loading, setLoading] = useState(true);
   const [swiping, setSwiping] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [reportModalVisible, setReportModalVisible] = useState(false);
+  const [reporting, setReporting] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -63,8 +66,26 @@ export default function ProfileDetailScreen() {
     }
   }, [candidate]);
 
+  const handleReportSubmit = useCallback(
+    async (reason: string) => {
+      if (!myProfile?.id || !candidate) return;
+      setReporting(true);
+      try {
+        await reportProfile(myProfile.id, candidate.id, reason);
+        setReportModalVisible(false);
+        Alert.alert("Report submitted", "Thanks for letting us know. Our team will review this profile.");
+      } catch {
+        Alert.alert("Something went wrong", "Couldn't submit the report. Please try again.");
+      } finally {
+        setReporting(false);
+      }
+    },
+    [myProfile, candidate],
+  );
+
   return (
-    <Screen padded={false}>
+    <>
+      <Screen padded={false}>
       <View style={styles.header}>
         <Pressable onPress={() => router.back()} style={styles.backButton} hitSlop={8}>
           <Ionicons name="chevron-back" size={24} color={colors.text} />
@@ -151,10 +172,11 @@ export default function ProfileDetailScreen() {
                 >
                   <Ionicons name="share-outline" size={20} color={colors.textSecondary} />
                 </Pressable>
-                {/* TODO: reportar perfil — tabla `reports` ya existe, falta la UI (connect-it-moderation). */}
+                {/* Tabla `reports` ya existe (connect-it-moderation) — insert vía lib/moderation.ts */}
                 <Pressable
                   accessibilityRole="button"
                   accessibilityLabel="Report profile"
+                  onPress={() => setReportModalVisible(true)}
                   style={({ pressed }) => [styles.actionButton, styles.outlineButton, pressed && styles.actionPressed]}
                 >
                   <Ionicons name="flag-outline" size={18} color={colors.textSecondary} />
@@ -179,7 +201,14 @@ export default function ProfileDetailScreen() {
           </View>
         </>
       )}
-    </Screen>
+      </Screen>
+      <ReportProfileModal
+        visible={reportModalVisible}
+        onClose={() => setReportModalVisible(false)}
+        onSubmit={handleReportSubmit}
+        submitting={reporting}
+      />
+    </>
   );
 }
 
