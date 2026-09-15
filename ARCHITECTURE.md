@@ -812,6 +812,37 @@ dominios". Esa sesión:
 Sigue pendiente disparar el build de EAS en sí (`eas build`) — el
 proyecto ya quedó vinculado, falta correrlo.
 
+**Actualización 15/09/2026 (misma conversación, causa raíz real
+encontrada):** Jose probaba dando Likes en la vista web de `mobile/`
+publicada en GitHub Pages (`https://zaratrustre-dev.github.io/web-landing-hub/`,
+ver `.github/workflows/mobile-web.yml` — se redeploya solo en cada push
+a `main` que toque `mobile/`, Jose no corre nada local ni hace
+`git pull`) y el anuncio seguía sin aparecer pasados los 5 Likes. Se
+descartaron por orden: caché del navegador (bundle JS deployado
+verificado byte a byte vía `raw.githubusercontent.com/.../gh-pages/...`,
+ya tenía `get_due_sponsored_content`) y lógica de negocio (el `% = 0`
+del SQL se verificó aparte y era correcto). La causa real: `ALTER
+FUNCTION ... RENAME TO` (migración
+`20260915002100_rename_ads_to_sponsored_content.sql`) solo cambia el
+*nombre* de la función — el *cuerpo* seguía con el texto literal `from
+public.ads`, tabla que ya no existía tras el rename. Toda llamada a
+`get_due_sponsored_content()` fallaba en el servidor con `relation
+"public.ads" does not exist`, error que `sendSwipe()` traga a propósito
+(para no bloquear el guardado del Like) — por eso era invisible desde
+el cliente. Se confirmó simulando en SQL la llamada exacta de
+PostgREST (`set local role authenticated; set local
+"request.jwt.claim.sub" = '<uid>'; select
+get_due_sponsored_content(5);`) antes y después del fix. Corregido con
+`create or replace function` reescribiendo ambos cuerpos apuntando a
+`sponsored_content` (migración
+`20260915010500_fix_sponsored_content_function_bodies.sql`, nombre/
+firma/permisos/comments intactos). **Lección de proceso:** un rename de
+tabla en Postgres nunca es solo `ALTER TABLE RENAME` + `ALTER FUNCTION
+RENAME` si hay funciones que la referencian por nombre en su cuerpo —
+hay que grepear y reescribir esos cuerpos también, o probar la llamada
+real (no solo que el `ALTER` no tire error) antes de dar el fix por
+bueno.
+
 **Pendiente de Fase 2** (fuera de alcance de esta sesión, a propósito):
 - Búsqueda, filtros (categoría/skill/país).
 - Matches (qué pasa cuando el Like es mutuo — tabla `matches` ya existe).
