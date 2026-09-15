@@ -55,6 +55,16 @@ export const ISO_TO_COUNTRY_NAME: Record<string, string> = {
 };
 
 /**
+ * Sorted, de-duplicated list of country names for pickers (e.g. the
+ * Country filter in Search Filters, PDR §17) — derived from
+ * ISO_TO_COUNTRY_NAME so it's always in sync with the values actually
+ * stored in profiles.country.
+ */
+export const COUNTRY_NAMES: string[] = Array.from(new Set(Object.values(ISO_TO_COUNTRY_NAME))).sort((a, b) =>
+  a.localeCompare(b),
+);
+
+/**
  * Detects the user's country from the device's locale (no network, no
  * permissions needed). Returns the English name used by profiles.country,
  * or null if the device doesn't report a recognized region (rare case,

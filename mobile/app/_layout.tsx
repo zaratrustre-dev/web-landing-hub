@@ -9,6 +9,7 @@ import { Inter_400Regular, Inter_800ExtraBold } from "@expo-google-fonts/inter";
 import { JetBrainsMono_700Bold } from "@expo-google-fonts/jetbrains-mono";
 
 import { AuthProvider, useAuth } from "@/providers/AuthProvider";
+import { DiscoveryFiltersProvider } from "@/providers/DiscoveryFiltersProvider";
 import { colors } from "@/constants/theme";
 
 WebBrowser.maybeCompleteAuthSession();
@@ -60,14 +61,16 @@ export default function RootLayout() {
   return (
     <SafeAreaProvider>
       <AuthProvider>
-        <StatusBar style="light" />
-        <AuthGate />
-        <Stack
-          screenOptions={{
-            headerShown: false,
-            contentStyle: { backgroundColor: colors.background },
-          }}
-        />
+        <DiscoveryFiltersProvider>
+          <StatusBar style="light" />
+          <AuthGate />
+          <Stack
+            screenOptions={{
+              headerShown: false,
+              contentStyle: { backgroundColor: colors.background },
+            }}
+          />
+        </DiscoveryFiltersProvider>
       </AuthProvider>
     </SafeAreaProvider>
   );

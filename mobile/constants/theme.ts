@@ -15,6 +15,9 @@
   cardBackground: "#1B1C1C",
   cardButtonBackground: "#292A2A",
   photoBackground: "#343535",
+  // Fondo de inputs/selects en la pantalla Search Filters (PDR §17) —
+  // más oscuro que `surface`, tomado del export de Figma.
+  inputBackground: "#0D0E0F",
   destructive: "#EF4444",
   success: "#22C55E",
   googleButtonBg: "#FFFFFF",

@@ -45,6 +45,56 @@ function mapCandidateRow(row: CandidateRow): CandidateProfile {
 
 const CANDIDATE_POOL_SIZE = 20;
 
+// Home/Discovery — Search Filters (PDR §17, Figma "Connect-it Search &
+// Filters"): Category, Skill y Country, combinables entre sí. `role` usa
+// los mismos valores del enum `professional_role` (developer, designer,
+// entrepreneur, marketing, consultant, lender, logistics, recruiter,
+// influencer) aunque la pantalla de filtros solo ofrece chips para los
+// primeros 5 (los que tiene diseñados el Figma). `skills` es "cualquiera
+// de las elegidas" (OR), coherente con cómo se seleccionan como chips
+// removibles en la pantalla de filtros.
+export interface DiscoveryFilters {
+  role: string | null;
+  skills: string[];
+  country: string | null;
+  search: string;
+}
+
+export const EMPTY_DISCOVERY_FILTERS: DiscoveryFilters = {
+  role: null,
+  skills: [],
+  country: null,
+  search: "",
+};
+
+export function hasActiveFilters(filters: DiscoveryFilters): boolean {
+  return Boolean(filters.role || filters.country || filters.search.trim() || filters.skills.length > 0);
+}
+
+type DiscoveryCandidateRpcRow = {
+  id: string;
+  name: string | null;
+  age: number | null;
+  photo_url: string | null;
+  profession: string | null;
+  description: string | null;
+  portfolio_url: string | null;
+  skills: string[] | null;
+};
+
+function mapDiscoveryCandidateRow(row: DiscoveryCandidateRpcRow): CandidateProfile {
+  return {
+    id: row.id,
+    name: row.name,
+    age: row.age,
+    photoUrl: row.photo_url,
+    profession: row.profession,
+    description: row.description,
+    portfolioUrl: row.portfolio_url,
+    skills: row.skills ?? [],
+  };
+}
+
 // PDR §18 — límite de Likes. La ventana real de producción es 3 Likes/24h;
 // se deja en 50 Likes/10 segundos TEMPORALMENTE para pruebas (permite
 // probar las periodicidades de 22 y 47 sin bloquearse). Revertir a 3/24h
@@ -86,39 +136,34 @@ export async function fetchLikeLimitStatus(userId: string): Promise<LikeLimitSta
 }
 
 /**
- * Trae un candidato para Discovery (PDR §04): excluye el propio perfil y
- * cualquier perfil que el usuario ya haya likeado/dislikeado (tabla
- * `likes`). No hay todavía relevancia profesional/orden inteligente (fuera
- * de alcance de esta primera pasada) — se trae un lote pequeño de
- * candidatos y se elige uno al azar en cliente, para no mostrar siempre el
- * mismo primer resultado del orden natural de la tabla.
+ * Trae un candidato para Discovery (PDR §04, filtros PDR §17). La
+ * exclusión del propio perfil y de cualquiera ya likeado/dislikeado, más
+ * el filtrado opcional por Category/Skill/Country y la búsqueda de texto,
+ * se resuelven todos en servidor vía la función `fetch_discovery_candidates`
+ * (antes esto eran 2 queries desde el cliente sin ningún filtro). El
+ * servidor ya trae un lote de hasta `CANDIDATE_POOL_SIZE` en orden
+ * aleatorio; aquí se elige uno de ese lote, igual que antes, para no
+ * mostrar siempre el mismo primer resultado en pantallas que piden varias
+ * veces seguidas.
  *
- * Devuelve null cuando no quedan candidatos.
+ * Devuelve null cuando no quedan candidatos que cumplan los filtros.
  */
-export async function fetchNextCandidate(userId: string): Promise<CandidateProfile | null> {
-  const { data: swiped, error: swipedError } = await supabase
-    .from("likes")
-    .select("to_profile")
-    .eq("from_profile", userId);
-  if (swipedError) throw swipedError;
-
-  const excludedIds = [
-    userId,
-    ...((swiped ?? []) as { to_profile: string }[]).map((s) => s.to_profile),
-  ];
-
-  const { data, error } = await supabase
-    .from("profiles")
-    .select(CANDIDATE_SELECT)
-    .eq("onboarding_completed", true)
-    .not("id", "in", `(${excludedIds.join(",")})`)
-    .limit(CANDIDATE_POOL_SIZE);
+export async function fetchNextCandidate(
+  filters: DiscoveryFilters = EMPTY_DISCOVERY_FILTERS,
+): Promise<CandidateProfile | null> {
+  const { data, error } = await (supabase.rpc as RpcFn)("fetch_discovery_candidates", {
+    p_role: filters.role,
+    p_skill_names: filters.skills.length > 0 ? filters.skills : null,
+    p_country: filters.country,
+    p_search: filters.search.trim() || null,
+    p_limit: CANDIDATE_POOL_SIZE,
+  });
   if (error) throw error;
 
-  const rows = (data ?? []) as unknown as CandidateRow[];
+  const rows = (data ?? []) as unknown as DiscoveryCandidateRpcRow[];
   if (rows.length === 0) return null;
 
-  return mapCandidateRow(rows[Math.floor(Math.random() * rows.length)]);
+  return mapDiscoveryCandidateRow(rows[Math.floor(Math.random() * rows.length)]);
 }
 
 /** Trae el perfil completo de un candidato por id, para la vista de perfil completo. */

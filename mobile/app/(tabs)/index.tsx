@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { router, useFocusEffect } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
 
 import { AdModal } from "@/components/AdModal";
 import { ProfileCard } from "@/components/ProfileCard";
@@ -11,12 +11,15 @@ import {
   consumeCandidateStale,
   fetchLikeLimitStatus,
   fetchNextCandidate,
+  hasActiveFilters,
   sendSwipe,
   type CandidateProfile,
+  type DiscoveryFilters,
   type DueAd,
   type LikeLimitStatus,
 } from "@/lib/discovery";
 import { useAuth } from "@/providers/AuthProvider";
+import { useDiscoveryFilters } from "@/providers/DiscoveryFiltersProvider";
 
 // Discovery (PDR §04): Home muestra un candidato real a la vez, con Like/
 // Dislike guardados en `likes`, límite de 3 Likes (PDR §18, ventana
@@ -25,6 +28,7 @@ import { useAuth } from "@/providers/AuthProvider";
 export default function HomeScreen() {
   const { profile } = useAuth();
   const userId = profile?.id ?? null;
+  const { filters, resetFilters } = useDiscoveryFilters();
 
   const [candidate, setCandidate] = useState<CandidateProfile | null>(null);
   const [likeStatus, setLikeStatus] = useState<LikeLimitStatus | null>(null);
@@ -44,10 +48,17 @@ export default function HomeScreen() {
     candidateRef.current = candidate;
   }, [candidate]);
 
-  const loadCandidate = useCallback(async (id: string) => {
+  // Ref con la misma lógica que candidateRef: guarda los filtros aplicados
+  // la última vez que se cargó un candidato, para que useFocusEffect pueda
+  // detectar "los filtros cambiaron desde la Search Filters screen" sin
+  // tenerlos en sus deps (eso dispararía el efecto en cada tecleo si algún
+  // día los filtros vivieran en este mismo componente).
+  const appliedFiltersKeyRef = useRef<string>(JSON.stringify(filters));
+
+  const loadCandidate = useCallback(async (currentFilters: DiscoveryFilters) => {
     setError(null);
     try {
-      const next = await fetchNextCandidate(id);
+      const next = await fetchNextCandidate(currentFilters);
       setCandidate(next);
     } catch {
       setError("Couldn't load a profile right now. Try again in a moment.");
@@ -75,12 +86,15 @@ export default function HomeScreen() {
   useFocusEffect(
     useCallback(() => {
       if (!userId) return;
-      const needsNewCandidate = !candidateRef.current || consumeCandidateStale();
+      const filtersKey = JSON.stringify(filters);
+      const filtersChanged = filtersKey !== appliedFiltersKeyRef.current;
+      const needsNewCandidate = !candidateRef.current || consumeCandidateStale() || filtersChanged;
+      appliedFiltersKeyRef.current = filtersKey;
       setLoading(needsNewCandidate);
       const tasks: Promise<unknown>[] = [loadLikeStatus(userId)];
-      if (needsNewCandidate) tasks.push(loadCandidate(userId));
+      if (needsNewCandidate) tasks.push(loadCandidate(filters));
       Promise.all(tasks).finally(() => setLoading(false));
-    }, [userId, loadCandidate, loadLikeStatus]),
+    }, [userId, filters, loadCandidate, loadLikeStatus]),
   );
 
   // Countdown del límite de Likes: solo corre un timer mientras hay un
@@ -106,7 +120,7 @@ export default function HomeScreen() {
       setSwiping(true);
       try {
         const ad = await sendSwipe(userId, candidate.id, isLike);
-        await loadCandidate(userId);
+        await loadCandidate(filters);
         if (isLike) await loadLikeStatus(userId);
         if (ad) setDueAd(ad);
       } catch {
@@ -115,7 +129,7 @@ export default function HomeScreen() {
         setSwiping(false);
       }
     },
-    [userId, candidate, swiping, loadCandidate, loadLikeStatus],
+    [userId, candidate, swiping, filters, loadCandidate, loadLikeStatus],
   );
 
   const likesExhausted = likeStatus?.remaining === 0;
@@ -125,7 +139,17 @@ export default function HomeScreen() {
   return (
     <Screen scroll={false} padded={false}>
       <View style={styles.header}>
-        <Text style={styles.greeting}>Hi, {profile?.name?.split(" ")[0] ?? ""} 👋</Text>
+        <View style={styles.headerRow}>
+          <Text style={styles.greeting}>Hi, {profile?.name?.split(" ")[0] ?? ""} 👋</Text>
+          <Pressable
+            onPress={() => router.push("/discovery-filters")}
+            hitSlop={8}
+            style={styles.filterButton}
+          >
+            <Ionicons name="options-outline" size={22} color={colors.text} />
+            {hasActiveFilters(filters) ? <View style={styles.filterActiveDot} /> : null}
+          </Pressable>
+        </View>
         {likeStatus ? (
           <Text style={styles.likeStatus}>
             {likesExhausted
@@ -147,6 +171,20 @@ export default function HomeScreen() {
             disabled={swiping}
             likeDisabled={likesExhausted}
           />
+        ) : hasActiveFilters(filters) ? (
+          // Figma "Connect-it: Feed Vacío (Sin Perfiles)" (PDR §37): estado
+          // vacío específico para cuando el vacío lo causan los filtros,
+          // con CTA para quitarlos — distinto del vacío genérico de abajo.
+          <View style={styles.emptyState}>
+            <Ionicons name="filter-outline" size={48} color={colors.textFaint} />
+            <Text style={styles.emptyTitle}>No profiles match your filters</Text>
+            <Text style={styles.emptyBody}>
+              Widen your professional categories to discover more people in your field.
+            </Text>
+            <Pressable onPress={resetFilters} style={styles.resetFiltersButton} hitSlop={8}>
+              <Text style={styles.resetFiltersText}>Reset filters</Text>
+            </Pressable>
+          </View>
         ) : (
           <View style={styles.emptyState}>
             <Ionicons name="people-outline" size={48} color={colors.textFaint} />
@@ -166,11 +204,24 @@ export default function HomeScreen() {
 
 const styles = StyleSheet.create({
   header: { paddingHorizontal: spacing.lg, paddingTop: spacing.lg, marginBottom: spacing.lg, gap: spacing.xs },
+  headerRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   greeting: { fontSize: fontSize.xxl, fontWeight: "700", color: colors.text },
+  filterButton: { padding: spacing.xs, position: "relative" },
+  filterActiveDot: {
+    position: "absolute",
+    top: 2,
+    right: 2,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: colors.primary,
+  },
   likeStatus: { fontSize: fontSize.sm, color: colors.textMuted },
   body: { flex: 1, paddingHorizontal: spacing.lg, paddingBottom: spacing.lg },
   emptyState: { flex: 1, alignItems: "center", justifyContent: "center", gap: spacing.sm, paddingHorizontal: spacing.lg },
   emptyTitle: { fontSize: fontSize.lg, fontWeight: "600", color: colors.text, marginTop: spacing.sm },
   emptyBody: { fontSize: fontSize.sm, color: colors.textMuted, textAlign: "center" },
+  resetFiltersButton: { marginTop: spacing.sm, paddingVertical: spacing.sm, paddingHorizontal: spacing.lg },
+  resetFiltersText: { fontSize: fontSize.base, fontWeight: "600", color: colors.primary },
   error: { fontSize: fontSize.sm, color: colors.destructive, textAlign: "center", marginTop: spacing.sm },
 });
