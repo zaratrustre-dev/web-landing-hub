@@ -781,15 +781,36 @@ paquetes `expo-*`) y `AdModal.tsx` ahora reproduce los anuncios de
 (controles nativos, loop), en vez de abrir el `media_url` en el
 navegador. `link_url` (si el anuncio lo trae) se muestra como botón
 "Learn more" separado del media, para no pelear con los gestos táctiles
-del reproductor. **No se corrió `bun install` ni ningún rebuild nativo
-en esta sesión** — `bun.lock` sigue sin el registro de `expo-video`
-todavía. Pendiente para Jose antes de probar esto en un dispositivo real
-(no en Expo Go, que no incluye módulos nativos custom): (1) `bun install`
-localmente para que se resuelva `expo-video` y se actualice `bun.lock`;
-(2) como `expo-video` trae código nativo, hace falta un nuevo build
-nativo (EAS Build o `expo prebuild` + rebuild local) — un simple reload
-de JS no alcanza, a diferencia del resto de cambios de esta sesión que
-sí son solo JS.
+del reproductor. Se corrió `bun install` en el sandbox como prueba
+(`expo-video@57.0.4` resuelve sin conflictos de versión) pero `mobile/`
+nunca tuvo lockfile comiteado en este repo — no hay nada para pushear
+por ese lado.
+
+**Actualización 15/09/2026 (conversación nueva, según lo planeado):** el
+bloqueo de red se resolvió — abrir una conversación nueva sí alcanzó
+para que el sandbox tomara los dominios agregados (`expo.dev`,
+`api.expo.dev`, `exp.host`), sin necesidad de pasar a "Todos los
+dominios". Esa sesión:
+- Corrió `eas init` y vinculó `mobile/` a un proyecto EAS ya existente
+  (`@zaratrustre-dev/connect-it`) — agrega `extra.eas.projectId` en
+  `app.json`, `eas.json` (perfiles development/preview/production) y
+  `expo-dev-client` (necesario para builds de perfil development).
+  Ver commit `ef384b0`.
+- De paso encontró y arregló un bug no reportado: en el panel admin,
+  Editar/Borrar/Desactivar anuncios fallaba en desktop
+  (`NetworkError`) pero andaba en móvil — causado por bloqueadores de
+  anuncios de escritorio (uBlock, AdBlock, ETP de Firefox) que cortan
+  cualquier request cuya URL contenga la palabra "ads" (`/rest/v1/ads`
+  de PostgREST). Falso positivo conocido con Supabase/Firebase. Fix:
+  la tabla `ads` se renombró a `sponsored_content` (y las funciones
+  `get_due_ad`/`pick_and_rotate_ad_for_group` a
+  `get_due_sponsored_content`/`pick_and_rotate_sponsored_content_for_group`)
+  vía migración + ya aplicado en Supabase. Ver commit `dab14c0`.
+- También bajó la ventana de prueba del límite de Likes a 5 likes/10s
+  (antes 3/1min) para facilitar QA. Ver commit `39ae272`.
+
+Sigue pendiente disparar el build de EAS en sí (`eas build`) — el
+proyecto ya quedó vinculado, falta correrlo.
 
 **Pendiente de Fase 2** (fuera de alcance de esta sesión, a propósito):
 - Búsqueda, filtros (categoría/skill/país).
