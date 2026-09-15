@@ -127,10 +127,13 @@ export function BulkImportUsersDialog({
             <p className="text-xs text-muted-foreground">
               Columnas esperadas (cabecera en la primera fila): <strong>Email</strong>,{" "}
               <strong>Nombre</strong>, <strong>Edad</strong>, <strong>País</strong>,{" "}
-              <strong>Rol</strong>, <strong>Profesión</strong> (obligatorias) — Foto, Portafolio y
-              Descripción son opcionales. País puede venir en español (ej. "España") o en inglés.
-              Rol debe ser uno de: developer, designer, entrepreneur, marketing, consultant,
-              lender, logistics, recruiter, influencer. Profesión máximo 20 caracteres.
+              <strong>Rol</strong>, <strong>Rol Buscado</strong>, <strong>Profesión</strong>{" "}
+              (obligatorias) — Foto, Portafolio y Descripción son opcionales. País puede venir en
+              español (ej. "España") o en inglés. Rol y Rol Buscado deben ser uno de: developer,
+              designer, entrepreneur, marketing, consultant, lender, logistics, recruiter,
+              influencer. Profesión máximo 20 caracteres. Rol Buscado es obligatorio: sin él, la
+              base de datos marca el perfil como incompleto y no aparece en Discovery ni en el
+              buscador del panel por Rol.
             </p>
             <input
               type="file"
@@ -202,6 +205,7 @@ export function BulkImportUsersDialog({
                     <th className="px-3 py-2 font-medium">Email</th>
                     <th className="px-3 py-2 font-medium">País</th>
                     <th className="px-3 py-2 font-medium">Rol</th>
+                    <th className="px-3 py-2 font-medium">Rol Buscado</th>
                     <th className="px-3 py-2 font-medium">Profesión</th>
                   </tr>
                 </thead>
@@ -212,6 +216,7 @@ export function BulkImportUsersDialog({
                       <td className="px-3 py-2 text-foreground">{r.email}</td>
                       <td className="px-3 py-2 text-foreground">{r.country}</td>
                       <td className="px-3 py-2 text-foreground">{r.role}</td>
+                      <td className="px-3 py-2 text-foreground">{r.roleSought}</td>
                       <td className="px-3 py-2 text-foreground">{r.profession}</td>
                     </tr>
                   ))}

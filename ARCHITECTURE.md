@@ -917,3 +917,44 @@ tocar la card`, `feat(mobile): Reportar perfil (connect-it-moderation, PDR
 §22)`, `feat(mobile): límite de Likes (PDR §18) — ventana TEMPORAL de 1
 minuto` (+ 1 merge commit sincronizando con el importador de Excel del
 panel admin, sin conflictos — tocaba archivos distintos).
+
+## Sesión 15/09/2026 — Fix: importador de Excel no marcaba el perfil como completo de verdad
+
+**Gotcha encontrado** (reportado por Jose al probar el buscador del panel
+por Rol, ej. "developer"): el importador masivo de usuarios (sesión
+14/09/2026 más arriba) intentaba forzar `onboarding_completed = true` vía
+`updateProfileAdmin()` tras crear cada usuario, pero el trigger de base de
+datos `trg_profiles_compute_onboarding` /
+`compute_onboarding_completed()` (migración
+`20260906214810_reports_moderation_and_onboarding.sql`) **recalcula ese
+campo en cada insert/update y lo sobrescribe según `role`, `role_sought` y
+`profession`** — el valor explícito que mandaba el importador se perdía
+silenciosamente. Como el Excel nunca pedía `role_sought`, **todo usuario
+creado por bulk import quedaba con `onboarding_completed = false` de
+verdad**, aunque el panel mostrara el import como exitoso: invisible en
+Discovery (`fetchNextCandidate()` filtra `.eq("onboarding_completed",
+true)`) y "incompleto" para el filtro de Rol del buscador admin.
+
+**Fix**: `role_sought` (columna "Rol Buscado" en el Excel, mismo catálogo
+de 9 valores que "Rol") pasa a ser **obligatoria** en el importador:
+- `src/lib/bulk-import-users.ts`: nuevo alias de cabecera `rol_buscado` /
+  "Rol Buscado" / `role_sought`, añadida a `requiredCols`, validada contra
+  el mismo enum que `Rol`, incluida en `ImportRow` (`roleSought`) y pasada
+  a `createUser({ role_sought: ... })`. Sin ella, la fila se rechaza
+  explícitamente (mismo criterio todo-o-nada que las demás columnas) en
+  vez de crear un perfil incompleto en silencio.
+- `src/components/admin/BulkImportUsersDialog.tsx`: texto de columnas
+  esperadas y tabla de previsualización actualizados con "Rol Buscado".
+- Plantilla de referencia (Excel de ejemplo entregado a Jose) actualizada
+  con la nueva columna.
+
+**Corrige la nota de la sesión 14/09/2026** ("No se piden `role_sought` ni
+`skills`... el resto del perfil sí se marca `onboarding_completed =
+true`") — esa asunción era incorrecta una vez existe el trigger de
+recálculo automático; `skills` sigue sin pedirse en el Excel (no bloquea
+`onboarding_completed`, solo enriquece el matching/búsqueda por skill) y
+queda pendiente para una futura mejora si hace falta.
+
+**Commits en `main`**: `fix(admin): exigir Rol Buscado en el importador de
+Excel — sin él el trigger de la base de datos marca el perfil como
+incompleto`.

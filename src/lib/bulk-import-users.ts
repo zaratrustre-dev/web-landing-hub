@@ -303,6 +303,10 @@ const HEADER_ALIASES: Record<string, string> = {
   country: "pais",
   rol: "rol",
   role: "rol",
+  "rol buscado": "rol_buscado",
+  "rolbuscado": "rol_buscado",
+  role_sought: "rol_buscado",
+  "role sought": "rol_buscado",
   profesion: "profesion",
   profession: "profesion",
   portafolio: "portafolio",
@@ -322,6 +326,7 @@ export interface ImportRow {
   age: number;
   country: string; // ya normalizado al nombre en ingles de COUNTRIES
   role: string;
+  roleSought: string;
   profession: string;
   portfolioUrl: string | null;
   description: string | null;
@@ -375,7 +380,7 @@ export async function parseUsersExcelFile(file: File): Promise<ParseResult> {
     if (key) colIndex[key] = i;
   });
 
-  const requiredCols = ["email", "nombre", "edad", "pais", "rol", "profesion"];
+  const requiredCols = ["email", "nombre", "edad", "pais", "rol", "rol_buscado", "profesion"];
   const missingCols = requiredCols.filter((c) => !(c in colIndex));
   if (missingCols.length > 0) {
     return {
@@ -385,7 +390,7 @@ export async function parseUsersExcelFile(file: File): Promise<ParseResult> {
           rowNumber: 0,
           rawEmail: null,
           messages: [
-            `Faltan columnas obligatorias en el Excel: ${missingCols.join(", ")}. Cabeceras esperadas: Email, Nombre, Edad, Pais, Rol, Profesion (Foto, Portafolio y Descripcion son opcionales).`,
+            `Faltan columnas obligatorias en el Excel: ${missingCols.join(", ")}. Cabeceras esperadas: Email, Nombre, Edad, Pais, Rol, Rol Buscado, Profesion (Foto, Portafolio y Descripcion son opcionales).`,
           ],
         },
       ],
@@ -455,6 +460,21 @@ export async function parseUsersExcelFile(file: File): Promise<ParseResult> {
       messages.push(`Rol no reconocido: "${roleRaw}". Debe ser uno de: ${ROLE_VALUES.join(", ")}.`);
     }
 
+    // Obligatoria (ver ARCHITECTURE.md, gotcha "role_sought y onboarding_completed"):
+    // el trigger compute_onboarding_completed() de la base de datos recalcula
+    // onboarding_completed en cada insert/update y lo pone en false si falta
+    // role_sought, sin importar lo que mande este importador - un perfil sin
+    // esta columna queda invisible para Discovery y para el filtro de Rol del
+    // buscador admin, aunque el resto de datos este completo.
+    const roleSoughtRaw = get("rol_buscado").toLowerCase();
+    if (!roleSoughtRaw) {
+      messages.push("Rol buscado vacio.");
+    } else if (!ROLE_SET.has(roleSoughtRaw)) {
+      messages.push(
+        `Rol buscado no reconocido: "${roleSoughtRaw}". Debe ser uno de: ${ROLE_VALUES.join(", ")}.`,
+      );
+    }
+
     const profession = get("profesion");
     if (!profession) {
       messages.push("Profesion vacia.");
@@ -484,6 +504,7 @@ export async function parseUsersExcelFile(file: File): Promise<ParseResult> {
       age,
       country: country as string,
       role: roleRaw,
+      roleSought: roleSoughtRaw,
       profession,
       portfolioUrl,
       description,
@@ -575,6 +596,7 @@ export async function runBulkImport(
         name: row.name,
         age: row.age,
         role: row.role,
+        role_sought: row.roleSought,
         profession: row.profession,
         description: row.description ?? undefined,
         portfolio_url: row.portfolioUrl ?? undefined,
