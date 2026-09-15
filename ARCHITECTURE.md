@@ -998,3 +998,65 @@ con la columna "Habilidades" (ejemplo: `Node.js, React, DevOps`).
 
 **Commits en `main`**: `feat(admin): columna opcional Habilidades en el
 importador de Excel de usuarios`.
+
+## Sesión 15/09/2026 (cont.) — Cierra el bug de anuncios sin resolver + fixes de UI en AdModal
+
+**Cierra el "⚠️ SIN RESOLVER" de la sesión anterior.** Sin acceso a
+navegador en esta sesión tampoco, la causa raíz se encontró leyendo los
+logs reales de Supabase (`edge_logs` + `postgres_logs` del proyecto, vía
+Supabase MCP) de una prueba real de Hou en la web de GitHub Pages, en vez
+de simular por SQL: las llamadas a `POST /rest/v1/rpc/get_due_sponsored_content`
+devolvían `405` exactamente en los swipes donde `likes_count % periodicity_likes = 0`
+(el único camino que llega al `UPDATE`), y el log de Postgres en ese
+mismo instante mostraba `sql_state_code: 25006` (`read_only_sql_transaction`)
+apuntando al `update ... set last_shown_at = now()` dentro de
+`pick_and_rotate_sponsored_content_for_group`.
+
+**Causa real**: `get_due_sponsored_content` estaba marcada `STABLE`.
+PostgREST ejecuta las funciones `STABLE`/`IMMUTABLE` dentro de una
+transacción de solo lectura (por contrato: no deberían escribir) — pero
+esta función llama internamente a `pick_and_rotate_sponsored_content_for_group`,
+que sí hace un `UPDATE`. Postgres rechaza el `UPDATE` con `25006` solo
+cuando se invoca vía la API REST real; una simulación SQL directa (SQL
+Editor o `execute_sql` del MCP) corre en una transacción read-write
+normal y nunca lo detecta — de ahí que "en SQL simulado siempre
+funcionaba" pero nunca en la app real. Como `sendSwipe()` traga cualquier
+error del RPC de anuncios a propósito (para no bloquear el guardado del
+swipe), esto era invisible para el usuario y para las sesiones anteriores.
+
+**Fix**: se quitó `STABLE` de `get_due_sponsored_content` (queda
+`VOLATILE`, el default) — aplicado directo en Supabase vía MCP
+(`CREATE OR REPLACE FUNCTION`, mismo cuerpo/firma/permisos, + `NOTIFY
+pgrst, 'reload schema'`), sin migración nueva en el repo porque no
+cambia nada versionable más allá del propio código SQL de la función
+(que ya vive versionado en las migraciones anteriores — queda con el
+cuerpo desactualizado ahí, pero es solo histórico). **Lección agregada a
+`learnings.md`**: cualquier función RPC marcada `STABLE`/`IMMUTABLE` que
+escriba, directa o transitivamente, falla solo a través de PostgREST —
+revisar `provolatile` en `pg_proc` antes de dar por buena una función así
+marcada.
+
+**De paso, 3 fixes de UI en `AdModal.tsx` pedidos por Hou probando en
+Firefox móvil** (capturas contra la build de GitHub Pages):
+- Quitado el botón "Continue": una vez pasa el timer obligatorio de
+  `AD_MIN_VIEW_SECONDS`, la X que aparece al mismo tiempo ya alcanza para
+  cerrar — el botón de texto era redundante.
+- "Learn more" (cuando el anuncio trae `link_url`) ahora está disponible
+  desde el primer segundo del anuncio, no solo después del countdown —
+  antes vivía detrás del mismo `if (canClose)` que también condicionaba
+  el botón Continue eliminado.
+- Anuncios de `media_type: "video"` se veían recortados a solo una
+  esquina en la build web. Causa: `VideoView` (`expo-video`) renderiza
+  un `<video>` HTML nativo en web — un "replaced element" en términos de
+  CSS — que no se estira solo con `position: absolute` + `top/left/
+  right/bottom: 0` como sí lo hace el `<div>` que usa `Image` de React
+  Native Web; sin `width`/`height: "100%"` explícitos queda pineado a su
+  tamaño intrínseco. Fix: agregado `width: "100%", height: "100%"` al
+  estilo `media` compartido por ambos (`Image` y `VideoView`) — no
+  probado en vivo (sin acceso a browser en esta sesión), a confirmar por
+  Hou en la próxima prueba real.
+
+**Commits en `main`**: `fix(mobile): AdModal — quitar botón Continue
+redundante, Learn more visible desde el inicio, y fix del video
+recortado en web` (`eb6a2ad`). El fix de la función SQL no generó commit
+en el repo (cambio aplicado directo en Supabase, ver arriba).
