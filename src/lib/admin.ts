@@ -322,7 +322,7 @@ export interface AdRow {
 /** Todos los anuncios (RLS admin_all ya limita esto a admins de verdad). */
 export async function fetchAds() {
   const { data, error } = await supabase
-    .from("ads")
+    .from("sponsored_content")
     .select(
       "id, title, media_type, media_url, link_url, periodicity_likes, is_active, last_shown_at, created_at, updated_at",
     )
@@ -358,7 +358,7 @@ export interface CreateAdInput {
 // tablas nuevas no siempre infiere bien con los tipos escritos a mano.
 export async function createAd(input: CreateAdInput) {
   const { error } = await (
-    supabase.from("ads") as unknown as {
+    supabase.from("sponsored_content") as unknown as {
       insert: (v: Record<string, unknown>) => PromiseLike<{ error: unknown }>;
     }
   ).insert({
@@ -382,7 +382,7 @@ export interface UpdateAdInput {
 
 export async function updateAd(adId: string, fields: UpdateAdInput) {
   const { error } = await (
-    supabase.from("ads") as unknown as {
+    supabase.from("sponsored_content") as unknown as {
       update: (v: Record<string, unknown>) => {
         eq: (col: string, val: string) => PromiseLike<{ error: unknown }>;
       };
@@ -394,7 +394,7 @@ export async function updateAd(adId: string, fields: UpdateAdInput) {
 }
 
 export async function deleteAd(adId: string) {
-  const { error } = await supabase.from("ads").delete().eq("id", adId);
+  const { error } = await supabase.from("sponsored_content").delete().eq("id", adId);
   if (error) throw error;
 }
 
@@ -405,7 +405,7 @@ export async function deleteAd(adId: string) {
  * cuando exista el flujo real de Likes de la app de usuario final.
  */
 export async function fetchDueAd(likesCount: number) {
-  const { data, error } = await (supabase.rpc as RpcFn)("get_due_ad", {
+  const { data, error } = await (supabase.rpc as RpcFn)("get_due_sponsored_content", {
     likes_count: likesCount,
   });
   if (error) throw error;

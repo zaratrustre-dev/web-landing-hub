@@ -198,12 +198,12 @@ async function fetchTotalLikesGiven(userId: string): Promise<number> {
 }
 
 /**
- * Le pregunta al servidor (función `get_due_ad`) si, con el nº total de
+ * Le pregunta al servidor (función `get_due_sponsored_content`) si, con el nº total de
  * Likes dado, toca mostrar un anuncio ahora — y si toca, lo rota dentro de
  * su grupo de periodicidad. Devuelve null si no toca ninguno.
  */
 async function fetchDueAd(likesCount: number): Promise<DueAd | null> {
-  const { data, error } = await (supabase.rpc as RpcFn)("get_due_ad", { likes_count: likesCount });
+  const { data, error } = await (supabase.rpc as RpcFn)("get_due_sponsored_content", { likes_count: likesCount });
   if (error) throw error;
   const row = data as DueAd | null;
   return row?.id ? row : null;
