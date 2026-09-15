@@ -182,17 +182,21 @@ export interface DueAd {
 }
 
 /**
- * Total de Likes (no Dislikes) que el usuario ha dado en toda su historia.
- * Es el contador que dispara los anuncios — distinto del contador de
- * fetchLikeLimitStatus(), que solo mira la ventana de 1 minuto/24h del
- * límite de Likes.
+ * Total de interacciones (Likes + Dislikes) que el usuario ha dado en toda
+ * su historia. Es el contador que dispara los anuncios — distinto del
+ * contador de fetchLikeLimitStatus(), que solo mira la ventana de
+ * 10s/24h del límite de Likes (y que además solo cuenta Likes, no
+ * Dislikes).
+ *
+ * Cambio 15/09/2026 (pedido explícito): antes solo contaba Likes; ahora
+ * cuenta cualquier swipe, para que el anuncio aparezca cada 5/22/47
+ * interacciones sin importar si fueron Like o Dislike.
  */
-async function fetchTotalLikesGiven(userId: string): Promise<number> {
+async function fetchTotalSwipesGiven(userId: string): Promise<number> {
   const { count, error } = await supabase
     .from("likes")
     .select("id", { count: "exact", head: true })
-    .eq("from_profile", userId)
-    .eq("is_like", true);
+    .eq("from_profile", userId);
   if (error) throw error;
   return count ?? 0;
 }
@@ -202,8 +206,8 @@ async function fetchTotalLikesGiven(userId: string): Promise<number> {
  * Likes dado, toca mostrar un anuncio ahora — y si toca, lo rota dentro de
  * su grupo de periodicidad. Devuelve null si no toca ninguno.
  */
-async function fetchDueAd(likesCount: number): Promise<DueAd | null> {
-  const { data, error } = await (supabase.rpc as RpcFn)("get_due_sponsored_content", { likes_count: likesCount });
+async function fetchDueAd(swipesCount: number): Promise<DueAd | null> {
+  const { data, error } = await (supabase.rpc as RpcFn)("get_due_sponsored_content", { likes_count: swipesCount });
   if (error) throw error;
   const row = data as DueAd | null;
   return row?.id ? row : null;
@@ -212,13 +216,17 @@ async function fetchDueAd(likesCount: number): Promise<DueAd | null> {
 type RpcFn = (fn: string, args: Record<string, unknown>) => PromiseLike<{ data: unknown; error: unknown }>;
 
 /**
- * Guarda un Like o Dislike. Si fue un Like, de paso comprueba si toca
- * mostrar un anuncio (PDR panel admin §5-10) y lo devuelve — quien llame
- * a sendSwipe() decide cómo mostrarlo (ver AdModal). Un fallo al consultar
+ * Guarda un Like o Dislike y, de paso, comprueba si toca mostrar un
+ * anuncio (PDR panel admin §5-10) y lo devuelve — quien llame a
+ * sendSwipe() decide cómo mostrarlo (ver AdModal). Un fallo al consultar
  * el anuncio nunca bloquea el guardado del swipe ni Discovery: se traga el
  * error y se comporta como si no tocara ninguno.
  *
- * NOTA: el límite de 3 Likes/24h (PDR §18, función `likes_used_last_24h`
+ * Cambio 15/09/2026 (pedido explícito): antes el chequeo de anuncio solo
+ * se hacía tras un Like; ahora se hace tras CUALQUIER swipe (Like o
+ * Dislike), contando ambos para la periodicidad.
+ *
+ * NOTA: el límite de 5 Likes/10s (PDR §18, función `likes_used_last_24h`
  * ya existente en la base de datos) todavía NO se aplica aquí a nivel de
  * servidor — el límite de cliente en fetchLikeLimitStatus() es la única
  * barrera hoy. Pendiente si se quiere endurecer.
@@ -233,10 +241,9 @@ export async function sendSwipe(
   ]);
   if (error) throw error;
 
-  if (!isLike) return null;
   try {
-    const totalLikes = await fetchTotalLikesGiven(fromProfileId);
-    return await fetchDueAd(totalLikes);
+    const totalSwipes = await fetchTotalSwipesGiven(fromProfileId);
+    return await fetchDueAd(totalSwipes);
   } catch {
     return null;
   }
