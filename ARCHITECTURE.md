@@ -1060,3 +1060,61 @@ Firefox móvil** (capturas contra la build de GitHub Pages):
 redundante, Learn more visible desde el inicio, y fix del video
 recortado en web` (`eb6a2ad`). El fix de la función SQL no generó commit
 en el repo (cambio aplicado directo en Supabase, ver arriba).
+
+## Sesión 16/09/2026 — Home: Search Filters (Category, Skill, Country — PDR §17)
+
+Implementado el filtro del Home a partir del export de Figma "Connect-it
+Search & Filters" (pantalla dedicada, pegada en chat como componente
+React/styled-components + versión con estilos inline).
+
+**Backend**: nueva función `fetch_discovery_candidates` (migración
+`20260915204839_discovery_candidates_filterable_rpc.sql`, aplicada vía
+Supabase MCP). Filtra en servidor por `role` (Category, enum
+`professional_role`), `skills` (cualquiera de las elegidas, OR) y
+`country` (exacto), más búsqueda de texto por nombre/profesión — todos
+combinables entre sí (AND entre categorías de filtro). De paso mueve
+aquí la exclusión de ya-swipeados/propio perfil, que antes eran 2
+queries separadas sin ningún filtro desde `lib/discovery.ts`. Sigue el
+mismo patrón que `admin_list_profiles` en el panel admin. Probada con
+`execute_sql` simulando `auth.uid()` vía `set_config('request.jwt.claim.sub', …)`.
+
+**Mobile**:
+- `lib/discovery.ts`: `fetchNextCandidate()` pasa de recibir `userId` a
+  recibir un `DiscoveryFilters` (`role`, `skills`, `country`, `search`) y
+  llama al RPC nuevo en vez de a 2 queries de `profiles`/`likes`.
+- `providers/DiscoveryFiltersProvider.tsx` (nuevo): contexto compartido
+  entre Home y la pantalla de filtros — necesario porque expo-router no
+  tiene forma de devolver un valor entre pantallas al hacer
+  `router.back()`.
+- `app/discovery-filters.tsx` (nuevo): la pantalla del Figma en React
+  Native — chips de Category (solo los 5 valores del enum con chip
+  diseñado: developer/designer/entrepreneur/marketing/consultant; los
+  otros 4 —lender, logistics, recruiter, influencer— quedan fuera hasta
+  que tengan diseño), buscador+chips removibles de Skills (reutiliza
+  `fetchSkillsCatalog` de `lib/profile.ts`), selector de Country (modal
+  con los 194 países de `constants/countries.ts`), RESET y Apply Filters.
+- `app/(tabs)/index.tsx`: botón de filtros en el header (punto naranja si
+  hay algún filtro activo), recarga el candidato cuando los filtros
+  cambian (comparando un `JSON.stringify` de los filtros aplicados vs. el
+  del último fetch, mismo patrón de ref que ya usaba `consumeCandidateStale`),
+  y estado vacío específico "No profiles match your filters" con botón
+  "Reset filters" (Figma "Feed Vacío (Sin Perfiles)", PDR §37).
+- `constants/countries.ts`: nuevo export `COUNTRY_NAMES` (lista ordenada
+  y sin duplicados derivada de `ISO_TO_COUNTRY_NAME`) para el selector.
+- `constants/theme.ts`: nuevo color `inputBackground` (`#0D0E0F`, tomado
+  del export de Figma) para los inputs/selects de esta pantalla.
+
+Verificado `npx tsc --noEmit` (0 errores) y `eslint` sobre los archivos
+tocados (0 errores) antes de commitear.
+
+**Drift detectado (no de esta sesión)**: al hacer `git fetch` antes del
+commit, Supabase tiene 2 migraciones más recientes que las de `main`
+(`20260915214749_add_apprentice_role` y
+`20260915214804_apprentice_onboarding_and_bulk_import_tracking`, ambas
+posteriores a la de esta sesión) que no existen como archivo en el
+repo — mismo patrón que el drift ya anotado el 12/09. Pendiente que
+quien las aplicó (probablemente Hou vía Claude Code) las commitee, o
+reconstruirlas si se pierden.
+
+**Commit en `main`**: `feat(mobile): Search Filters en Home — Category,
+Skill y Country (PDR §17)` (`b87b7a3`).
