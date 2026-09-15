@@ -23,10 +23,11 @@ interface AdModalProps {
  *
  * Rediseño 15/09/2026 (pedido explícito): a pantalla completa (antes era
  * una tarjeta centrada con overlay) y con un temporizador obligatorio de
- * `AD_MIN_VIEW_SECONDS` — durante ese tiempo no hay ningún botón para
- * cerrar (ni el botón X, ni "Learn more", ni Android back), solo cuando
- * termina la cuenta regresiva aparece el botón para cerrar y pasar al
- * siguiente perfil.
+ * `AD_MIN_VIEW_SECONDS` — durante ese tiempo no hay botón X ni Android
+ * back para cerrar, solo cuando termina la cuenta regresiva aparece la X.
+ * "Learn more" (si el anuncio tiene link_url) está disponible desde el
+ * primer segundo, no solo tras el timer. Ya no hay un botón "Continue"
+ * separado: una vez pasa el timer, la X sola alcanza para cerrar.
  *
  * `media_type: "video"` se reproduce in-app con expo-video (controles
  * nativos ocultos mientras el temporizador corre, para no dar una forma
@@ -108,30 +109,22 @@ export function AdModal({ ad, onClose }: AdModalProps) {
             {ad.title}
           </Text>
 
-          {canClose ? (
-            <View style={styles.actions}>
-              {ad.link_url ? (
-                <Pressable
-                  onPress={handleLearnMore}
-                  style={({ pressed }) => [styles.learnMoreButton, pressed && styles.learnMorePressed]}
-                  accessibilityRole="button"
-                >
-                  <Text style={styles.learnMoreText}>Learn more</Text>
-                  <Ionicons name="open-outline" size={16} color={colors.textSecondary} />
-                </Pressable>
-              ) : null}
-
+          <View style={styles.actions}>
+            {ad.link_url ? (
               <Pressable
-                onPress={onClose}
-                style={({ pressed }) => [styles.continueButton, pressed && styles.continuePressed]}
+                onPress={handleLearnMore}
+                style={({ pressed }) => [styles.learnMoreButton, pressed && styles.learnMorePressed]}
                 accessibilityRole="button"
               >
-                <Text style={styles.continueText}>Continue</Text>
+                <Text style={styles.learnMoreText}>Learn more</Text>
+                <Ionicons name="open-outline" size={16} color={colors.textSecondary} />
               </Pressable>
-            </View>
-          ) : (
-            <Text style={styles.waitText}>Espera {secondsLeft}s para continuar</Text>
-          )}
+            ) : null}
+
+            {!canClose ? (
+              <Text style={styles.waitText}>Espera {secondsLeft}s para continuar</Text>
+            ) : null}
+          </View>
         </View>
       </View>
     </Modal>
@@ -149,6 +142,13 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
+    // width/height 100% explícitos además del inset: en web, VideoView
+    // renderiza un <video> nativo (replaced element CSS), que NO se
+    // estira solo con top/left/right/bottom:0 como sí lo hace el <div>
+    // de Image — sin esto queda pineado a su tamaño intrínseco, mostrando
+    // solo una porción del cuadro (el bug de "solo se ve la esquina").
+    width: "100%",
+    height: "100%",
   },
   scrim: {
     position: "absolute",
@@ -225,20 +225,5 @@ const styles = StyleSheet.create({
     fontSize: fontSize.xs,
     letterSpacing: 0.6,
     color: colors.textSecondary,
-  },
-  continueButton: {
-    flex: 1,
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.xl,
-    borderRadius: radius.md,
-    backgroundColor: colors.primary,
-    alignItems: "center",
-  },
-  continuePressed: { opacity: 0.85 },
-  continueText: {
-    fontFamily: fontFamily.body,
-    fontSize: fontSize.base,
-    fontWeight: "700",
-    color: colors.primaryForeground,
   },
 });
