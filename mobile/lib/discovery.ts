@@ -45,13 +45,14 @@ function mapCandidateRow(row: CandidateRow): CandidateProfile {
 
 const CANDIDATE_POOL_SIZE = 20;
 
-// PDR §18 — límite de Likes. La ventana real de producción es 24h; se deja
-// en 1 minuto TEMPORALMENTE para pruebas (debe coincidir con el intervalo
-// de la función `likes_used_last_24h` en Supabase — ver migración
-// 20260914072120_temp_likes_window_1_minute.sql). Revertir ambos a 24h
-// antes de producción.
-export const LIKE_LIMIT = 3;
-export const LIKE_WINDOW_MS = 60 * 1000;
+// PDR §18 — límite de Likes. La ventana real de producción es 3 Likes/24h;
+// se deja en 5 Likes/10 segundos TEMPORALMENTE para pruebas (debe coincidir
+// con el intervalo de la función `likes_used_last_24h` en Supabase — ver
+// migración 20260915100000_temp_likes_window_10_seconds.sql, que sustituye
+// a la ventana anterior de 1 minuto). Revertir ambos a 3/24h antes de
+// producción.
+export const LIKE_LIMIT = 5;
+export const LIKE_WINDOW_MS = 10 * 1000;
 
 export interface LikeLimitStatus {
   remaining: number;
