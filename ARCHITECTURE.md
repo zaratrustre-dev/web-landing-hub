@@ -843,6 +843,69 @@ hay que grepear y reescribir esos cuerpos también, o probar la llamada
 real (no solo que el `ALTER` no tire error) antes de dar el fix por
 bueno.
 
+**Resto de la sesión del 15/09/2026 (mismo hilo, después del fix de
+arriba):**
+
+- **Contador de anuncios ahora cuenta Like O Dislike** (pedido
+  explícito), no solo Like. `sendSwipe()` en `mobile/lib/discovery.ts`
+  ya no hace `if (!isLike) return null` antes de chequear el anuncio;
+  `fetchTotalLikesGiven` (contaba solo `is_like=true`) se reemplazó por
+  `fetchTotalSwipesGiven` (cuenta cualquier fila de `likes` del
+  usuario, like o dislike). El nombre de columna `periodicity_likes` en
+  `sponsored_content` quedó igual (no se migró) aunque ahora mide
+  interacciones en general, no solo likes — dato a tener en cuenta si
+  se retoma esto.
+- **`AdModal.tsx` reescrito a pantalla completa** (pedido explícito):
+  antes era una tarjeta centrada con overlay, cerrable al toque. Ahora
+  cubre toda la pantalla (imagen o vídeo edge-to-edge) y tiene un
+  temporizador obligatorio de `AD_MIN_VIEW_SECONDS = 10` — mientras
+  corre no hay ningún botón para cerrar (ni X, ni "Learn more", ni
+  Android back), solo un contador en la esquina; al llegar a 0 aparece
+  el botón de cerrar (+ "Learn more" si `link_url`), que dispara el
+  mismo `onClose()` de siempre y pasa al siguiente perfil.
+- **Límite de Likes temporal subido a 50/10s** (pedido explícito, para
+  poder probar los grupos de periodicidad 22 y 47 sin bloquearse a los
+  pocos likes). Es puramente cliente (`fetchLikeLimitStatus` en
+  `discovery.ts`, consulta directa a `likes` con `gte(created_at,
+  since)`) — no depende de ninguna función SQL, así que no hizo falta
+  migración. **Recordar revertir a 3 Likes/24h antes de producción**
+  (dato: el contador de "Likes restantes" se resetea solo cada vez que
+  pasan más de 10s sin dar Like — es la mecánica normal de una ventana
+  deslizante tan corta, no es un bug, y es distinto del contador
+  acumulado que dispara el anuncio, que nunca se resetea).
+- **Se mandó `notify pgrst, 'reload schema';`** por SQL directo,
+  porque Supabase/PostgREST cachea su esquema y no detecta solo
+  funciones/tablas renombradas o nuevas — ver entrada nueva en
+  `learnings.md`. Se hizo porque, a pesar de que el fix de arriba se
+  confirmó correcto simulando `auth.uid()` en SQL directo repetidas
+  veces con usuarios reales que ya habían llegado a 5/10+ interacciones,
+  el anuncio seguía sin disparar en la app real (`last_shown_at` seguía
+  `null`) — la sospecha es que la API REST (que sí pasa por PostgREST)
+  nunca vio la función renombrada, a diferencia de las pruebas por SQL
+  directo (que la esquivan por completo).
+- **`/welcome` devuelve 404 al entrar directo — es intencional y
+  funciona bien**: se confirmó que `dist/404.html` publicado es
+  idéntico byte a byte a `dist/index.html` (el truco de SPA-fallback
+  para GitHub Pages, ver más abajo en este documento, sigue en pie). Un
+  navegador real ejecuta el JS igual con status 404. Pero `/welcome` es
+  la pantalla de login (`app/(auth)/welcome.tsx`) — no tiene lógica de
+  swipes ni de anuncios; si se prueba ahí no va a aparecer nada por
+  diseño, hay que loguearse y probar en Discovery.
+- **⚠️ SIN RESOLVER al cierre de esta sesión:** después de todo lo
+  anterior (fix de función + reload de esquema), el anuncio sigue sin
+  aparecer en pruebas reales — `sponsored_content.last_shown_at` sigue
+  en `null`. Se agotaron las vías de diagnóstico disponibles sin acceso
+  a un navegador real: la extensión de Chrome conectada a Claude no
+  estaba disponible en toda la sesión, y el cambio de allowlist de red
+  del sandbox que Jose activó no tomó efecto en esta misma conversación
+  (puede necesitar una conversación nueva). **Sin poder ver la consola
+  del navegador (Network/Console) durante una prueba real, no se puede
+  seguir descartando causas** (CORS, algún error de runtime distinto al
+  ya corregido, anon key/URL mal configurada en el build de GitHub
+  Pages, etc.). Punto de partida para la próxima sesión: confirmar
+  acceso de red primero, después reproducir en vivo con DevTools
+  abierto.
+
 **Pendiente de Fase 2** (fuera de alcance de esta sesión, a propósito):
 - Búsqueda, filtros (categoría/skill/país).
 - Matches (qué pasa cuando el Like es mutuo — tabla `matches` ya existe).
