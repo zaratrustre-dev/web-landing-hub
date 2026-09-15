@@ -958,3 +958,43 @@ queda pendiente para una futura mejora si hace falta.
 **Commits en `main`**: `fix(admin): exigir Rol Buscado en el importador de
 Excel — sin él el trigger de la base de datos marca el perfil como
 incompleto`.
+
+## Sesión 15/09/2026 (cont.) — Importador de Excel: columna opcional "Habilidades"
+
+**Objetivo**: cerrar el pendiente que quedó anotado en la sesión anterior
+("`skills` sigue sin pedirse en el Excel... queda pendiente para una
+futura mejora si hace falta") — a petición de Jose, añadir una columna
+"Habilidades" al importador masivo de usuarios, igual que en el
+documento de referencia (la plantilla de Excel entregada).
+
+**Diseño**: a diferencia de `role_sought`, las skills **no** son
+obligatorias — no las lee el trigger `compute_onboarding_completed()`,
+solo enriquecen el matching/búsqueda por skill (`skill_filter` en
+`admin_list_profiles`, filtro por skill del panel). Cada fila puede traer
+hasta 3 nombres separados por coma (mismo límite que ya aplica el trigger
+de `profile_skills` al guardar) y cada nombre debe existir ya en el
+catálogo (`fetchSkillsCatalog()` → tabla `skills`) — el importador nunca
+crea una skill nueva, rechaza la fila explícitamente si no la reconoce
+(mismo criterio que País, Rol y Rol Buscado).
+
+**Cambios en `src/lib/bulk-import-users.ts`**:
+- El catálogo de skills se carga **una sola vez** al abrir el archivo
+  (`fetchSkillsCatalog()`), no fila a fila.
+- Nuevo alias de cabecera: "Habilidades" / "Habilidad" / "Skills" / "Skill".
+- Columna opcional (no entra en `requiredCols`); si viene, valida cada
+  nombre contra el catálogo y el límite de 3.
+- `ImportRow` gana `skillIds: string[]` (para guardar) y
+  `skillNames: string[]` (para la previsualización).
+- `runBulkImport()` llama a `replaceProfileSkills(newUserId, skillIds)`
+  después de crear el usuario y subir la foto, antes de marcar el perfil
+  como completo.
+
+**Cambios en `src/components/admin/BulkImportUsersDialog.tsx`**: texto de
+columnas esperadas y tabla de previsualización con la nueva columna
+"Habilidades".
+
+**Plantilla de referencia** (Excel de ejemplo entregado a Jose) actualizada
+con la columna "Habilidades" (ejemplo: `Node.js, React, DevOps`).
+
+**Commits en `main`**: `feat(admin): columna opcional Habilidades en el
+importador de Excel de usuarios`.

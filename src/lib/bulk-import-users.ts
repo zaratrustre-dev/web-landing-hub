@@ -4,6 +4,8 @@ import {
   createUser,
   deleteUser,
   fetchAllAdminEmails,
+  fetchSkillsCatalog,
+  replaceProfileSkills,
   updateProfileAdmin,
   updateProfilePhoto,
   uploadProfilePhoto,
@@ -313,6 +315,10 @@ const HEADER_ALIASES: Record<string, string> = {
   portfolio: "portafolio",
   descripcion: "descripcion",
   description: "descripcion",
+  habilidades: "habilidades",
+  habilidad: "habilidades",
+  skills: "habilidades",
+  skill: "habilidades",
 };
 
 function normalizeHeader(h: string): string {
@@ -331,6 +337,8 @@ export interface ImportRow {
   portfolioUrl: string | null;
   description: string | null;
   photoUrl: string | null; // URL externa a descargar (puede ser null)
+  skillIds: string[]; // opcional, maximo 3 (mismo limite que el trigger de profile_skills)
+  skillNames: string[]; // para la previsualizacion en el dialogo
 }
 
 export interface ImportRowError {
@@ -379,6 +387,14 @@ export async function parseUsersExcelFile(file: File): Promise<ParseResult> {
     const key = HEADER_ALIASES[normalizeHeader(String(h ?? ""))];
     if (key) colIndex[key] = i;
   });
+
+  // Catalogo de skills (opcional en el Excel, ver columna "Habilidades" mas
+  // abajo). Se carga una sola vez para todo el archivo, no fila a fila.
+  const skillsCatalog = await fetchSkillsCatalog();
+  const skillsByNormalizedName = new Map<string, { id: string; name: string }>();
+  for (const s of skillsCatalog) {
+    skillsByNormalizedName.set(normalizeCountryKey(s.name), s);
+  }
 
   const requiredCols = ["email", "nombre", "edad", "pais", "rol", "rol_buscado", "profesion"];
   const missingCols = requiredCols.filter((c) => !(c in colIndex));
@@ -492,6 +508,35 @@ export async function parseUsersExcelFile(file: File): Promise<ParseResult> {
     const portfolioUrl = get("portafolio") || null;
     const photoUrl = extractPhotoUrl(get("foto"));
 
+    // Habilidades: opcional (no la exige el trigger de onboarding_completed,
+    // a diferencia de Rol Buscado), pero si viene, cada nombre debe existir
+    // ya en el catalogo de skills - nunca se crea una skill nueva desde el
+    // Excel. Separadas por coma; maximo 3 (mismo limite que aplica el
+    // trigger de profile_skills al guardar).
+    const skillNamesRaw = get("habilidades");
+    const skillIds: string[] = [];
+    const skillNames: string[] = [];
+    if (skillNamesRaw) {
+      const parts = skillNamesRaw
+        .split(",")
+        .map((s) => s.trim())
+        .filter((s) => s.length > 0);
+      if (parts.length > 3) {
+        messages.push(`Demasiadas habilidades (${parts.length}/3 maximo): "${skillNamesRaw}".`);
+      }
+      for (const part of parts.slice(0, 3)) {
+        const match = skillsByNormalizedName.get(normalizeCountryKey(part));
+        if (!match) {
+          messages.push(
+            `Habilidad no reconocida: "${part}". Debe existir en el catalogo de skills (ver panel admin → Usuarios → Crear/Editar usuario para la lista completa).`,
+          );
+        } else {
+          skillIds.push(match.id);
+          skillNames.push(match.name);
+        }
+      }
+    }
+
     if (messages.length > 0) {
       errors.push({ rowNumber, rawEmail: rawEmail || null, messages });
       continue;
@@ -505,6 +550,8 @@ export async function parseUsersExcelFile(file: File): Promise<ParseResult> {
       country: country as string,
       role: roleRaw,
       roleSought: roleSoughtRaw,
+      skillIds,
+      skillNames,
       profession,
       portfolioUrl,
       description,
@@ -610,6 +657,10 @@ export async function runBulkImport(
         const file = await fetchImageAsFile(row.photoUrl, `import-${newUserId}`);
         const publicUrl = await uploadProfilePhoto(newUserId, file);
         await updateProfilePhoto(newUserId, publicUrl);
+      }
+
+      if (row.skillIds.length > 0) {
+        await replaceProfileSkills(newUserId, row.skillIds);
       }
 
       await updateProfileAdmin(newUserId, { onboarding_completed: true });
