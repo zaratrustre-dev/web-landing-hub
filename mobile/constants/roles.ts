@@ -1,7 +1,17 @@
-// Exactamente 9 roles profesionales — regla inmutable (PDR §5, Master Prompt
-// §5, skill connect-it-product). Se usan idénticos para Role y Role Sought
-// (PDR §6): el usuario elige su propio rol y, por separado, qué rol busca,
-// del mismo catálogo de 9.
+// 9 roles profesionales elegibles (PDR §5, Master Prompt §5, skill
+// connect-it-product) — se usan idénticos para Role y Role Sought (PDR §6):
+// el usuario elige su propio rol y, por separado, qué rol busca, del mismo
+// catálogo de 9.
+//
+// Actualización 15/09/2026: se añadió una 10ª categoría, "Apprentice", que
+// NO aparece en este grid de 9 — nunca se elige a mano en Role ni en Role
+// Sought. Se asigna automáticamente cuando, en la nueva pregunta de
+// onboarding "Do you have experience as an entrepreneur?" (entre Terms y
+// Role), el usuario responde "No": salta la pantalla de Role y su categoría
+// queda fijada en "apprentice", continuando el registro en Role Sought.
+// Sigue siendo editable después desde Edit Profile (selector simple, con
+// las 10 categorías) para cualquier usuario, incluido volver de Apprentice a
+// una de las 9 o viceversa.
 export const PROFESSIONAL_ROLES = [
   "developer",
   "designer",
@@ -14,7 +24,12 @@ export const PROFESSIONAL_ROLES = [
   "influencer",
 ] as const;
 
-export type ProfessionalRole = (typeof PROFESSIONAL_ROLES)[number];
+export const APPRENTICE_ROLE = "apprentice" as const;
+
+export type ProfessionalRole = (typeof PROFESSIONAL_ROLES)[number] | typeof APPRENTICE_ROLE;
+
+/** Las 10 categorías, para selectores que sí deben ofrecer Apprentice (Edit Profile). */
+export const ALL_PROFESSIONAL_ROLES = [...PROFESSIONAL_ROLES, APPRENTICE_ROLE] as const;
 
 export const ROLE_LABELS: Record<ProfessionalRole, string> = {
   developer: "Developer",
@@ -26,6 +41,7 @@ export const ROLE_LABELS: Record<ProfessionalRole, string> = {
   logistics: "Logistics",
   recruiter: "Recruiter",
   influencer: "Influencer",
+  apprentice: "Apprentice",
 };
 
 // Icono representativo de cada rol (Ionicons). Elección propia, no viene
@@ -41,4 +57,5 @@ export const ROLE_ICONS: Record<ProfessionalRole, string> = {
   logistics: "cube-outline",
   recruiter: "people-outline",
   influencer: "megaphone-outline",
+  apprentice: "school-outline",
 };

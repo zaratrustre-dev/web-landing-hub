@@ -358,6 +358,7 @@ export type Database = {
           blocked_at: string | null
           blocked_by: string | null
           blocked_reason: string | null
+          bulk_imported: boolean
           country: string | null
           created_at: string
           description: string | null
@@ -381,6 +382,7 @@ export type Database = {
           blocked_at?: string | null
           blocked_by?: string | null
           blocked_reason?: string | null
+          bulk_imported?: boolean
           country?: string | null
           created_at?: string
           description?: string | null
@@ -404,6 +406,7 @@ export type Database = {
           blocked_at?: string | null
           blocked_by?: string | null
           blocked_reason?: string | null
+          bulk_imported?: boolean
           country?: string | null
           created_at?: string
           description?: string | null
@@ -676,6 +679,7 @@ export type Database = {
       admin_list_profiles: {
         Args: {
           blocked_filter?: boolean
+          bulk_imported_filter?: boolean
           country_filter?: string
           page_limit?: number
           page_offset?: number
@@ -688,6 +692,7 @@ export type Database = {
         Returns: {
           age: number
           blocked_at: string
+          bulk_imported: boolean
           country: string
           created_at: string
           email: string
@@ -784,6 +789,7 @@ export type Database = {
         | "logistics"
         | "recruiter"
         | "influencer"
+        | "apprentice"
       report_target_type: "profile" | "chat"
     }
     CompositeTypes: {
@@ -924,6 +930,7 @@ export const Constants = {
         "logistics",
         "recruiter",
         "influencer",
+        "apprentice",
       ],
       report_target_type: ["profile", "chat"],
     },

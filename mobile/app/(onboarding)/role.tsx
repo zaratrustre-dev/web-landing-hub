@@ -36,11 +36,11 @@ export default function RoleScreen() {
   return (
     <Screen>
       <StepHeader
-        step={2}
-        totalSteps={5}
+        step={3}
+        totalSteps={6}
         title="What's your role?"
         subtitle="Choose the category that best represents you."
-        onBack={() => router.replace("/(onboarding)/terms")}
+        onBack={() => router.replace("/(onboarding)/entrepreneur-experience")}
       />
       <RoleGrid selected={selected} onSelect={setSelected} />
       {error ? <Text style={styles.error}>{error}</Text> : null}

@@ -23,6 +23,7 @@ interface CreateUserPayload {
   country?: string;
   marketing_consent?: boolean;
   radar_enabled?: boolean;
+  bulk_imported?: boolean;
 }
 
 interface DeleteUserPayload {
@@ -117,6 +118,7 @@ export default {
               country: payload.country ?? null,
               marketing_consent: payload.marketing_consent ?? false,
               radar_enabled: payload.radar_enabled ?? false,
+              bulk_imported: payload.bulk_imported ?? false,
             })
             .eq("id", newUserId);
           if (updateError) throw updateError;

@@ -1,7 +1,7 @@
 # Arquitectura - Connect-it
 
 > Generado a partir de una exploración real del código el 09/09/2026, actualizado
-> el 13/09/2026. Mantener actualizado tras cambios estructurales - un
+> por última vez el 15/09/2026. Mantener actualizado tras cambios estructurales - un
 > ARCHITECTURE.md desactualizado es peor que no tenerlo, porque lleva a asumir
 > cosas que ya no son ciertas.
 
@@ -1052,14 +1052,97 @@ Firefox móvil** (capturas contra la build de GitHub Pages):
   right/bottom: 0` como sí lo hace el `<div>` que usa `Image` de React
   Native Web; sin `width`/`height: "100%"` explícitos queda pineado a su
   tamaño intrínseco. Fix: agregado `width: "100%", height: "100%"` al
-  estilo `media` compartido por ambos (`Image` y `VideoView`) — no
-  probado en vivo (sin acceso a browser en esta sesión), a confirmar por
-  Hou en la próxima prueba real.
+  estilo `media` compartido por ambos (`Image` y `VideoView`). **Confirmado
+  resuelto por Hou en la sesión del 15/09/2026 (cont.) — ver más abajo.**
 
 **Commits en `main`**: `fix(mobile): AdModal — quitar botón Continue
 redundante, Learn more visible desde el inicio, y fix del video
 recortado en web` (`eb6a2ad`). El fix de la función SQL no generó commit
 en el repo (cambio aplicado directo en Supabase, ver arriba).
+
+## Sesión 15/09/2026 (cont.) — 10ª categoría "Apprentice" + selector de categoría en Edit Profile + filtrar/borrar en bloque usuarios de Excel
+
+Confirmado por Hou: el fix del video recortado (sesión anterior, `AdModal.tsx`)
+quedó resuelto. Tres pedidos de producto nuevos, todos implementados:
+
+**1. Nueva pregunta de onboarding + 10ª categoría "Apprentice" (Aprendiz)**
+
+Entre Terms y Role, nueva pantalla `mobile/app/(onboarding)/entrepreneur-experience.tsx`:
+*"Do you have experience as an entrepreneur?"* (en inglés). "Yes" → pantalla de Role de
+siempre (9 categorías). "No" → `profiles.role` se fija en `apprentice` (`updateRole`) y se
+salta directo a Role Sought (que sigue con las 9 categorías de siempre — Apprentice no es
+buscable como Role Sought).
+
+- `apprentice` añadido al enum `public.professional_role` — migración
+  `20260915214749_add_apprentice_role.sql`, **en su propia migración** porque Postgres no
+  permite usar un valor de enum recién creado (`ALTER TYPE ... ADD VALUE`) dentro de la misma
+  transacción en la que se añade.
+- `mobile/constants/roles.ts`: `PROFESSIONAL_ROLES` (9, sin cambios, sigue siendo lo que usa
+  `RoleGrid` en Role/Role Sought) + nuevo `APPRENTICE_ROLE` + `ALL_PROFESSIONAL_ROLES` (10, para
+  el selector de Edit Profile) + tipo `ProfessionalRole` ampliado a 10 valores. Mismo tipo
+  ampliado en `mobile/lib/database.types.ts` (declarado por separado, sin import cruzado —
+  deben mantenerse en sync a mano).
+- Gate central `mobile/app/index.tsx`: `if (!profile.role)` ahora redirige a
+  `entrepreneur-experience` en vez de a `role` directamente.
+- `StepHeader`: pasos recalculados — Terms(1) → Entrepreneur experience?(2) → Role(3) → Role
+  Sought(4) → Create Profile(5), `totalSteps` 5→6.
+- Detalle documentado en `docs/connect-it/02-roles-perfiles-navegacion.md` (la regla "exactamente
+  9 roles" del PDR queda anotada como modificada por esta decisión de producto).
+
+**2. Selector de categoría en Edit Profile (para todos los usuarios)**
+
+`mobile/app/edit-profile.tsx`: nueva sección "Category" con un selector simple (lista
+desplegable propia, sin librería nueva — no `RoleGrid`, a petición explícita de Jose) con las
+10 categorías (`ALL_PROFESSIONAL_ROLES`). Cualquier usuario puede cambiar su categoría en
+cualquier momento, incluido entrar o salir de Apprentice a mano. Guarda con el mismo `updateRole`
+que ya usaba la pantalla de onboarding, solo si el valor cambió.
+
+**3. Filtrar y borrar en bloque los usuarios subidos por Excel (panel admin)**
+
+No existía ninguna forma de distinguir un perfil creado por el importador masivo de uno creado a
+mano — se añadió trazabilidad y acciones en bloque:
+
+- Migración `20260915214804_apprentice_onboarding_and_bulk_import_tracking.sql`: columna
+  `profiles.bulk_imported boolean not null default false` + `admin_list_profiles` reescrita con
+  un `bulk_imported_filter` nuevo y la columna correspondiente en el resultado.
+  **Decisión explícita de Jose**: solo se marca desde esta migración en adelante — los usuarios
+  importados en sesiones anteriores (14-15/09) quedan sin marcar, no se identifican
+  retroactivamente.
+- `bulk-import-users.ts` pasa `bulk_imported: true` en cada `createUser()`; la Edge Function
+  `admin-users` (acción `create`) guarda ese campo (default `false` para la creación manual).
+- `admin.users.index.tsx`: nuevo filtro "Origen: cualquiera / Solo importados por Excel / Solo
+  creados manualmente", badge "Excel" junto al nombre en la tabla, checkboxes de selección
+  (por fila + "seleccionar todos los de esta página") y botón "Eliminar seleccionados" — hace un
+  `deleteUser()` por cada id seleccionado (reutiliza la Edge Function existente, sin acción nueva
+  en el backend) y reporta si alguno falló sin perder la selección de los que sí.
+- `ROLE_LABELS` del panel admin también gana `apprentice: "Apprentice"` (afecta también al
+  selector de Rol/Role Sought del formulario de "Crear usuario" manual — un admin puede asignar
+  Apprentice a mano igual que cualquier otro rol).
+
+**Verificación**: `npx tsc --noEmit` limpio en `mobile/` (0 errores) y en la raíz (los únicos
+errores que da `tsc` en la raíz — `bulk-import-users.ts` líneas de índices de array y
+`p.$userId.tsx` con `routeTree.gen.ts` desactualizado — ya existían antes de esta sesión,
+confirmado comparando contra HEAD con `git stash`; no se tocaron). `eslint` limpio en todos los
+archivos nuevos/editados de esta sesión (los dos avisos preexistentes en `admin.ts` y en la Edge
+Function, y los warnings de BOM en `role.tsx`/`role-sought.tsx`, también preexistían).
+
+**Migraciones aplicadas directo en Supabase vía MCP** (proyecto `cucvqfhucmjphjpquivn`).
+
+**Drift de nombre de migración, detectado y resuelto en la sesión de push (16/09/2026, tarde)**:
+las dos migraciones de esta sección se aplicaron directo en Supabase con los timestamps
+`20260915214749` y `20260915214804`, pero el commit original (nunca pusheado — ver más abajo)
+traía los archivos con timestamps `20260915214808`/`20260915214900` (generados al escribir el
+patch, no al aplicar contra Supabase). La sesión del 16/09/2026 detectó el drift por `git fetch`
+(ver sección siguiente) pero no llegó a resolverlo. Al aplicar finalmente este commit se
+renombraron ambos archivos a los timestamps reales, confirmados contra `list_migrations` y contra
+el `pg_get_functiondef` de `admin_list_profiles` en producción (coincide letra por letra) — mismo
+patrón que el drift de `public_profile_share` (12/09) y `temp_likes_window_1_minute` (14/09): se
+reconstruye/renombra el archivo local, no se reejecuta nada contra Supabase.
+
+**Commit en `main`**: pendiente de PAT en la sesión original (13/09-15/09); pusheado finalmente
+el 15/09/2026 desde una sesión con el repo autorizado, aplicado sobre `main` después de la sesión
+de Search Filters (16/09/2026) — ver commit de merge/resolución de conflicto más abajo en el
+historial de `main`.
 
 ## Sesión 16/09/2026 — Home: Search Filters (Category, Skill, Country — PDR §17)
 
@@ -1112,9 +1195,10 @@ commit, Supabase tiene 2 migraciones más recientes que las de `main`
 (`20260915214749_add_apprentice_role` y
 `20260915214804_apprentice_onboarding_and_bulk_import_tracking`, ambas
 posteriores a la de esta sesión) que no existen como archivo en el
-repo — mismo patrón que el drift ya anotado el 12/09. Pendiente que
-quien las aplicó (probablemente Hou vía Claude Code) las commitee, o
-reconstruirlas si se pierden.
+repo — mismo patrón que el drift ya anotado el 12/09. **Resuelto**: eran
+del commit de la sesión "15/09/2026 (cont.)" documentada arriba —
+pusheado después de esta sesión, con los dos archivos de migración
+renombrados a estos timestamps reales (ver esa sección para el detalle).
 
 **Commit en `main`**: `feat(mobile): Search Filters en Home — Category,
 Skill y Country (PDR §17)` (`b87b7a3`).

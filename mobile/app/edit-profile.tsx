@@ -8,11 +8,13 @@ import { Button } from "@/components/Button";
 import { Screen } from "@/components/Screen";
 import { SkillPicker } from "@/components/SkillPicker";
 import { TextField } from "@/components/TextField";
+import { ALL_PROFESSIONAL_ROLES, ROLE_LABELS, type ProfessionalRole } from "@/constants/roles";
 import { colors, fontSize, radius, spacing } from "@/constants/theme";
 import {
   fetchSkillsCatalog,
   replaceMySkills,
   updateProfileDetails,
+  updateRole,
   uploadProfilePhoto,
   type SkillOption,
 } from "@/lib/profile";
@@ -30,6 +32,8 @@ export default function EditProfileScreen() {
   const [portfolioUrl, setPortfolioUrl] = useState(profile?.portfolio_url ?? "");
   const [skillCatalog, setSkillCatalog] = useState<SkillOption[]>([]);
   const [selectedSkillIds, setSelectedSkillIds] = useState<string[]>(profile?.skill_ids ?? []);
+  const [category, setCategory] = useState<ProfessionalRole | null>(profile?.role ?? null);
+  const [categoryOpen, setCategoryOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
@@ -77,6 +81,9 @@ export default function EditProfileScreen() {
         photoUrl,
       });
       await replaceMySkills(session.user.id, selectedSkillIds);
+      if (category && category !== profile?.role) {
+        await updateRole(session.user.id, category);
+      }
       await refreshProfile();
       setSaved(true);
     } catch (err) {
@@ -140,6 +147,43 @@ export default function EditProfileScreen() {
         placeholder="https://…"
         autoCapitalize="none"
       />
+
+      <Text style={styles.sectionLabel}>Category</Text>
+      <Pressable
+        style={styles.categoryField}
+        onPress={() => setCategoryOpen((v) => !v)}
+        accessibilityRole="button"
+      >
+        <Text style={styles.categoryValue}>{category ? ROLE_LABELS[category] : "Select a category"}</Text>
+        <Ionicons
+          name={categoryOpen ? "chevron-up" : "chevron-down"}
+          size={18}
+          color={colors.textMuted}
+        />
+      </Pressable>
+      {categoryOpen ? (
+        <View style={styles.categoryList}>
+          {ALL_PROFESSIONAL_ROLES.map((role) => (
+            <Pressable
+              key={role}
+              style={styles.categoryOption}
+              onPress={() => {
+                setCategory(role);
+                setCategoryOpen(false);
+              }}
+            >
+              <Text
+                style={[styles.categoryOptionText, category === role && styles.categoryOptionTextSelected]}
+              >
+                {ROLE_LABELS[role]}
+              </Text>
+              {category === role ? (
+                <Ionicons name="checkmark" size={18} color={colors.primary} />
+              ) : null}
+            </Pressable>
+          ))}
+        </View>
+      ) : null}
 
       <Text style={styles.sectionLabel}>Skills</Text>
       <SkillPicker
@@ -218,4 +262,37 @@ const styles = StyleSheet.create({
   button: { marginTop: spacing.xl },
   error: { color: colors.destructive, fontSize: fontSize.sm, marginTop: spacing.md },
   saved: { color: colors.primary, fontSize: fontSize.sm, marginTop: spacing.md },
+  categoryField: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    marginBottom: spacing.lg,
+  },
+  categoryValue: { fontSize: fontSize.base, color: colors.text },
+  categoryList: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.md,
+    backgroundColor: colors.surface,
+    marginTop: -spacing.md,
+    marginBottom: spacing.lg,
+    overflow: "hidden",
+  },
+  categoryOption: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  categoryOptionText: { fontSize: fontSize.base, color: colors.textMuted },
+  categoryOptionTextSelected: { color: colors.text, fontWeight: "600" },
 });

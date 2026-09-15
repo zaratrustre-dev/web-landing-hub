@@ -12,6 +12,7 @@ export interface AdminProfileRow {
   photo_url: string | null;
   marketing_consent: boolean;
   radar_enabled: boolean;
+  bulk_imported: boolean;
   is_blocked: boolean;
   is_reported: boolean;
   onboarding_completed: boolean;
@@ -35,6 +36,7 @@ export interface AdminProfileFilters {
   reported?: boolean | undefined;
   skillId?: string | undefined;
   radar?: boolean | undefined;
+  bulkImported?: boolean | undefined;
 }
 
 export async function fetchAdminProfiles(
@@ -52,6 +54,7 @@ export async function fetchAdminProfiles(
     reported_filter: filters.reported ?? null,
     skill_filter: filters.skillId || null,
     radar_filter: filters.radar ?? null,
+    bulk_imported_filter: filters.bulkImported ?? null,
   });
 
   if (error) throw error;
@@ -97,6 +100,7 @@ export interface CreateUserInput {
   country?: string | undefined;
   marketing_consent?: boolean | undefined;
   radar_enabled?: boolean | undefined;
+  bulk_imported?: boolean | undefined;
 }
 
 async function invokeAdminUsers(body: Record<string, unknown>) {

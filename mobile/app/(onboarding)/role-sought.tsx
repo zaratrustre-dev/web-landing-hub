@@ -36,8 +36,8 @@ export default function RoleSoughtScreen() {
   return (
     <Screen>
       <StepHeader
-        step={3}
-        totalSteps={5}
+        step={4}
+        totalSteps={6}
         title="Who are you looking for?"
         subtitle="Choose the category of professionals you're most interested in connecting with."
         onBack={() => router.replace("/(onboarding)/role")}

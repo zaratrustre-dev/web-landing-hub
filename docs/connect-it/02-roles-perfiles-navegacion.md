@@ -20,15 +20,41 @@ Sought" (`Connect-it Professional Discovery Duplicated` y `Connect-it Profession
 Unified`), ambas con la misma cuadrícula de 9 botones de rol — confirma que Role y Role Sought se
 seleccionan en dos pasos idénticos en estructura, tal como indica el flujo del PDR.
 
-## Roles (exactamente 9, ninguno más)
+## Roles (9 originales del PDR + 1 categoría añadida el 15/09/2026)
 
 PDR §5, Master Prompt §5, skill `connect-it-product`:
 
 `Developer, Designer, Entrepreneur, Marketing, Consultant, Lender, Logistics, Recruiter,
 Influencer`
 
-**Role Sought** (PDR §6) usa exactamente el mismo catálogo de 9 categorías — el usuario indica
-qué categoría profesional busca, no una lista distinta.
+**Role Sought** (PDR §6) sigue usando exactamente este catálogo de 9 categorías — el usuario
+indica qué categoría profesional busca, no una lista distinta. La 10ª categoría (ver abajo) no se
+puede elegir como Role Sought — nadie busca activamente "aprendices" desde ese selector.
+
+### ⚠️ Actualización 15/09/2026: 10ª categoría "Apprentice" (Aprendiz)
+
+Decisión de producto de Jose (15/09/2026) que **modifica la regla "exactamente 9" de arriba**,
+documentada aquí porque `connect-it-product` puede seguir describiendo solo 9 hasta que se
+actualice esa skill:
+
+- Nueva pregunta de onboarding, **entre Terms y Role**: *"Do you have experience as an
+  entrepreneur?"* (en inglés, como el resto de la app).
+  - **Yes** → sigue el flujo normal: pantalla de Role con las 9 categorías de siempre.
+  - **No** → se salta la pantalla de Role, `profiles.role` se fija automáticamente en
+    `apprentice` (Apprentice), y el registro continúa directo en Role Sought (con las 9
+    categorías originales, sin Apprentice).
+- `apprentice` es un valor más del enum `public.professional_role` (migración
+  `20260915214749_add_apprentice_role.sql` — en su propia migración porque Postgres no permite
+  usar un valor de enum recién añadido en la misma transacción en que se crea).
+- **Editable después, para cualquier usuario**: Edit Profile (mobile) tiene un selector simple
+  (lista desplegable, no la cuadrícula de iconos de Role/Role Sought) con las 10 categorías —
+  cualquiera puede pasar a Apprentice o salir de Apprentice manualmente en cualquier momento.
+- Pasos de onboarding recalculados: Terms(1) → Entrepreneur experience?(2) → Role(3, si "Yes") →
+  Role Sought(4) → Create Profile(5) — `totalSteps` pasó de 5 a 6 en el `StepHeader`.
+- Detalle de implementación: el gate central `mobile/app/index.tsx` (`if (!profile.role)`) ahora
+  redirige a la nueva pantalla `entrepreneur-experience` en vez de a `role` directamente — así que
+  un usuario que recarga a mitad de flujo vuelve a ver la pregunta (comportamiento aceptado, no es
+  un bug).
 
 ## Campos del perfil
 

@@ -29,6 +29,7 @@ const ROLE_LABELS: Record<string, string> = {
   logistics: "Logistics",
   recruiter: "Recruiter",
   influencer: "Influencer",
+  apprentice: "Apprentice",
 };
 
 export const Route = createFileRoute("/admin/users/")({
@@ -80,6 +81,10 @@ function AdminUsersPage() {
   const [reportedFilter, setReportedFilter] = useState<"" | "true" | "false">("");
   const [skillFilter, setSkillFilter] = useState("");
   const [radarFilter, setRadarFilter] = useState<"" | "true" | "false">("");
+  const [bulkImportedFilter, setBulkImportedFilter] = useState<"" | "true" | "false">("");
+
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
 
   useEffect(() => {
     fetchSkillsCatalog()
@@ -104,6 +109,7 @@ function AdminUsersPage() {
     reported: reportedFilter === "" ? undefined : reportedFilter === "true",
     skillId: skillFilter || undefined,
     radar: radarFilter === "" ? undefined : radarFilter === "true",
+    bulkImported: bulkImportedFilter === "" ? undefined : bulkImportedFilter === "true",
   };
   // Clave estable para saber cuándo han cambiado los filtros de verdad
   // (evita comparar el objeto por referencia en las dependencias del efecto).
@@ -163,6 +169,12 @@ function AdminUsersPage() {
   useEffect(() => {
     setPage(0);
   }, [filtersKey]);
+
+  // La selección de checkboxes es solo de la página actual — se limpia al
+  // cambiar de página o de filtros para no arrastrar ids que ya no se ven.
+  useEffect(() => {
+    setSelectedIds([]);
+  }, [page, filtersKey]);
 
   if (loadingSession || (session && isAdmin === null)) {
     return (
@@ -225,6 +237,43 @@ function AdminUsersPage() {
     } finally {
       setDeletingId(null);
     }
+  }
+
+  function toggleSelected(id: string) {
+    setSelectedIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+  }
+
+  function toggleSelectAllOnPage() {
+    setSelectedIds((prev) => (prev.length === rows.length ? [] : rows.map((r) => r.id)));
+  }
+
+  /** Borra en bloque los usuarios seleccionados (pensado para limpiar importaciones de Excel). */
+  async function handleBulkDelete() {
+    if (selectedIds.length === 0) return;
+    if (
+      !window.confirm(
+        `¿Borrar ${selectedIds.length} usuario(s) seleccionados definitivamente? No se puede deshacer.`,
+      )
+    ) {
+      return;
+    }
+
+    setBulkDeleting(true);
+    setError(null);
+    const failed: string[] = [];
+    for (const id of selectedIds) {
+      try {
+        await deleteUser(id);
+      } catch {
+        failed.push(id);
+      }
+    }
+    setBulkDeleting(false);
+    setSelectedIds(failed);
+    if (failed.length > 0) {
+      setError(`No se pudieron borrar ${failed.length} de ${selectedIds.length} usuario(s).`);
+    }
+    loadPage();
   }
 
   async function handleCreate(e: FormEvent) {
@@ -568,13 +617,23 @@ function AdminUsersPage() {
             <option value="true">🔌 Solo con Radar</option>
             <option value="false">Sin Radar</option>
           </select>
+          <select
+            value={bulkImportedFilter}
+            onChange={(e) => setBulkImportedFilter(e.target.value as "" | "true" | "false")}
+            className="rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground"
+          >
+            <option value="">Origen: cualquiera</option>
+            <option value="true">Solo importados por Excel</option>
+            <option value="false">Solo creados manualmente</option>
+          </select>
           {(search ||
             roleFilter ||
             countryFilter ||
             blockedFilter ||
             reportedFilter ||
             skillFilter ||
-            radarFilter) && (
+            radarFilter ||
+            bulkImportedFilter) && (
             <button
               type="button"
               onClick={() => {
@@ -585,6 +644,7 @@ function AdminUsersPage() {
                 setReportedFilter("");
                 setSkillFilter("");
                 setRadarFilter("");
+                setBulkImportedFilter("");
               }}
               className="text-sm text-muted-foreground hover:underline"
             >
@@ -593,10 +653,39 @@ function AdminUsersPage() {
           )}
         </div>
 
+        {selectedIds.length > 0 && (
+          <div className="mt-3 flex items-center gap-3 rounded-md border border-destructive/30 bg-destructive/5 px-4 py-2">
+            <p className="text-sm text-foreground">{selectedIds.length} seleccionado(s)</p>
+            <button
+              type="button"
+              disabled={bulkDeleting}
+              onClick={handleBulkDelete}
+              className="rounded-md border border-destructive/40 px-3 py-1.5 text-xs font-medium text-destructive transition-colors hover:bg-destructive/10 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {bulkDeleting ? "Borrando…" : "Eliminar seleccionados"}
+            </button>
+            <button
+              type="button"
+              onClick={() => setSelectedIds([])}
+              className="text-sm text-muted-foreground hover:underline"
+            >
+              Deseleccionar todo
+            </button>
+          </div>
+        )}
+
         <div className="mt-6 overflow-x-auto rounded-xl border border-border">
           <table className="w-full text-left text-sm">
             <thead className="border-b border-border bg-muted/50 text-muted-foreground">
               <tr>
+                <th className="px-4 py-3 font-medium">
+                  <input
+                    type="checkbox"
+                    checked={rows.length > 0 && selectedIds.length === rows.length}
+                    onChange={toggleSelectAllOnPage}
+                    aria-label="Seleccionar todos los de esta página"
+                  />
+                </th>
                 <th className="px-4 py-3 font-medium">Foto</th>
                 <th className="px-4 py-3 font-medium">Nombre</th>
                 <th className="px-4 py-3 font-medium">Email</th>
@@ -617,19 +706,27 @@ function AdminUsersPage() {
             <tbody>
               {loadingRows ? (
                 <tr>
-                  <td colSpan={15} className="px-4 py-8 text-center text-muted-foreground">
+                  <td colSpan={16} className="px-4 py-8 text-center text-muted-foreground">
                     Cargando…
                   </td>
                 </tr>
               ) : rows.length === 0 ? (
                 <tr>
-                  <td colSpan={15} className="px-4 py-8 text-center text-muted-foreground">
+                  <td colSpan={16} className="px-4 py-8 text-center text-muted-foreground">
                     No hay usuarios todavía.
                   </td>
                 </tr>
               ) : (
                 rows.map((row) => (
                   <tr key={row.id} className="border-b border-border last:border-0">
+                    <td className="px-4 py-3">
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.includes(row.id)}
+                        onChange={() => toggleSelected(row.id)}
+                        aria-label={`Seleccionar ${row.name ?? row.email ?? row.id}`}
+                      />
+                    </td>
                     <td className="px-4 py-3">
                       {row.photo_url ? (
                         <img
@@ -643,7 +740,17 @@ function AdminUsersPage() {
                         </div>
                       )}
                     </td>
-                    <td className="px-4 py-3 text-foreground">{row.name ?? "—"}</td>
+                    <td className="px-4 py-3 text-foreground">
+                      {row.name ?? "—"}
+                      {row.bulk_imported && (
+                        <span
+                          title="Creado por el importador de Excel"
+                          className="ml-2 rounded-full bg-sky-500/15 px-2 py-0.5 text-xs font-medium text-sky-600"
+                        >
+                          Excel
+                        </span>
+                      )}
+                    </td>
                     <td className="px-4 py-3 text-foreground">{row.email ?? "—"}</td>
                     <td className="px-4 py-3 text-foreground">{row.age ?? "—"}</td>
                     <td className="px-4 py-3 text-foreground">

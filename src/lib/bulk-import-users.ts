@@ -648,6 +648,7 @@ export async function runBulkImport(
         description: row.description ?? undefined,
         portfolio_url: row.portfolioUrl ?? undefined,
         country: row.country,
+        bulk_imported: true,
       });
       const newUserId = (result as { user_id?: string } | null)?.user_id;
       if (!newUserId) throw new Error("La creacion no devolvio un user_id.");

@@ -7,7 +7,9 @@ import { colors } from "@/constants/theme";
 /**
  * Puerta de entrada: decide a qué pantalla ir según el estado real de
  * sesión/onboarding. Sigue el flujo del PDR/Master Prompt:
- * Google Login → Terms → Role → Role Sought → Create Profile → Home.
+ * Google Login → Terms → Entrepreneur experience? → Role (si "Yes") →
+ * Role Sought → Create Profile → Home. Si la respuesta es "No", role queda
+ * fijado en "apprentice" y este gate salta directo a Role Sought.
  */
 export default function Index() {
   const { session, profile, loading } = useAuth();
@@ -29,7 +31,7 @@ export default function Index() {
   }
 
   if (!profile.role) {
-    return <Redirect href="/(onboarding)/role" />;
+    return <Redirect href="/(onboarding)/entrepreneur-experience" />;
   }
 
   if (!profile.role_sought) {

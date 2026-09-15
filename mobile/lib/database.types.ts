@@ -13,7 +13,9 @@ export type ProfessionalRole =
   | "lender"
   | "logistics"
   | "recruiter"
-  | "influencer";
+  | "influencer"
+  // "Apprentice" (Aprendiz), añadida 15/09/2026 — ver constants/roles.ts.
+  | "apprentice";
 
 export interface Database {
   public: {

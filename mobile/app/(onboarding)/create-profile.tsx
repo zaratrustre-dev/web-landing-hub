@@ -119,8 +119,8 @@ export default function CreateProfileScreen() {
   return (
     <Screen>
       <StepHeader
-        step={4}
-        totalSteps={5}
+        step={5}
+        totalSteps={6}
         title="Create your profile"
         subtitle="Name and date of birth can't be changed after this step."
         onBack={() => router.replace("/(onboarding)/role-sought")}
